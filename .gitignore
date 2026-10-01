@@ -1,0 +1,90 @@
+# Dependencies & Environments
+backend/.venv/
+backend/venv/
+backend/env/
+backend/ENV/
+project/node_modules/
+project/dist/
+project/dist-ssr/
+
+# Python & SQLite
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.db
+*.sqlite3
+backend/instance/
+instance/
+
+# Environment Variables (Private configs)
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+*.local
+backend/.env*
+project/.env*
+
+# Media files (generated locally via create-db.py)
+backend/media/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# OS & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Personal/Internal documentation (not for repo)
+Documentación Personal/
+Instrucciones y Rubricas/
+
+# Debug/test scripts (root level)
+check_db_debug.py
+test_endpoint_fix.py
+test-env-config.sh
+project_structure.md
+
+# Internal documentation files
+ARQUITECTURA_ENTORNOS.md
+CAMBIOS_ENTORNOS.md
+COMPLETADO_ENTORNOS.md
+CONFIGURACION_ENTORNOS.md
+GUIA_RAPIDA_ENTORNOS.md
+
+# Temporary/personal files
+cuentas_para_jefa.zip
+
+# Production files
+project/.htaccess
+project/dist.zip
+backend/passenger_wsgi.py
+
+# Temporary dev files
+project/fix_ui.py
+project/ts_output.txt
+project/metadata.json
+project/INSTRUCCIONES.md
+
+# Backend debug/test scripts
+backend/debug_*.py
+backend/test_*.py
+backend/check_*.py
+backend/fix_*.py
+backend/add_*.py
+backend/find_user.py
+backend/promote_user.py
+backend/change_role.py
+backend/crear_cuentas_prueba.py
+backend/download_*.py
+backend/fetch_error.py
+backend/IMAGES_DOWNLOAD_SUMMARY.md
+backend/run-prod.sh
+backend/package-lock.json
+backend/flow_*.zip
+backend/zzz.zip

@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@700;900&display=swap');
+@import "tailwindcss";
+@config "./tailwind.config.js";
+
+@theme {
+  --container-center: true;
+  --container-padding: 1.5rem;
+
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Main CSS File */
+
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --primary: #f97316;
+  --secondary: #3b82f6;
+  --accent: #84cc16;
+  --highlight: #facc15;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom CSS classes can go here */
