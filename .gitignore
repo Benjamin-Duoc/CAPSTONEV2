@@ -39,6 +39,7 @@ yarn-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+~$*
 
 # Personal/Internal documentation (not for repo)
 Documentación Personal/
