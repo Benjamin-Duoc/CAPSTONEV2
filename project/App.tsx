@@ -3,18 +3,26 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import PressReleaseUploadPage from './components/PressReleaseUploadPage';
 import HomePage from './components/HomePage';
+import CoursesModule from './components/CoursesModule';
+import EntrepreneurshipModule from './components/EntrepreneurshipModule';
 import FreelanceServicesModule from './components/FreelanceServicesModule';
 import OpportunitiesModule from './components/OpportunitiesModule';
 import NewsModule from './components/NewsModule';
+import CommunityAdsModule from './components/CommunityAdsModule';
 import SpecialistsModule from './components/SpecialistsModule';
 import PhotoGalleryModule from './components/PhotoGalleryModule';
+import ResourcesModule from './components/ResourcesModule';
+import FundingModule from './components/FundingModule';
+import EventsModule from './components/EventsModule';
 import LegalModule from './components/LegalModule';
 import PhotojournalismModule from './components/PhotojournalismModule';
+import AdminPanel from './components/admin/AdminPanel';
 import SponsorDetailPage from './components/SponsorDetailPage';
 import NewsDetailPage from './components/NewsDetailPage';
 import JobDetailPage from './components/JobDetailPage';
 import PressReleasesModule from './components/PressReleasesModule';
 import PressReleaseDetailPage from './components/PressReleaseDetailPage';
+import CourseDetailPage from './components/CourseDetailPage';
 import AboutPage from './components/AboutPage';
 import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import TermsOfServicePage from './components/TermsOfServicePage';
@@ -23,11 +31,12 @@ import RegistrationPage from './components/RegistrationPage';
 import LoginPage from './components/LoginPage';
 import PhotojournalismDetailPage from './components/PhotojournalismDetailPage';
 import UserDashboard from './components/UserDashboard';
+import ClienteDashboard from './components/ClienteDashboard';
+import FreeDashboard from './components/FreeDashboard';
 import DestacadosModule from './components/DestacadosModule';
 import SpecialistDetailPage from './components/SpecialistDetailPage';
 import FundingDetailPage from './components/FundingDetailPage';
 import TalentDetailPage from './components/TalentDetailPage';
-import ModulePlaceholder from './components/ModulePlaceholder';
 
 import type { Page, User, Entrepreneurship, Course, Job, NewsArticle, PremiumSponsor, HeroHeading, PhotojournalismPost, Resource, FundingOpportunity, Specialist, ShareablePhoto, PressRelease, ShortCollaboration, EntrepreneurshipTip, SponsoredAd, CommunityPost, SpecialAd, Event, SiteStat, PartnerLogo, TalentProfile, FreelanceService, CommunityAd, NgoSpotlight, LegalTopic, PromoVideo, DestacadoArticle } from './types';
 
@@ -104,7 +113,7 @@ const App: React.FC = () => {
     // Persist user
     localStorage.setItem('cipress_user', JSON.stringify(user));
     localStorage.setItem('cipress_last_active', Date.now().toString());
-
+    
     // Role-based navigation
     if (isAdminUser(user)) {
       handleNavigate('admin');
@@ -165,11 +174,11 @@ const App: React.FC = () => {
       // 1. Restore User Session
       const savedUser = localStorage.getItem('cipress_user');
       const lastActive = localStorage.getItem('cipress_last_active');
-
+      
       if (savedUser && lastActive) {
         const now = Date.now();
         const tenMinutes = 10 * 60 * 1000;
-
+        
         if (now - parseInt(lastActive) < tenMinutes) {
           const user = JSON.parse(savedUser);
           setCurrentUser(user);
@@ -198,7 +207,7 @@ const App: React.FC = () => {
       // 2. Handle Flow Redirect Parameters (Auto-Confirm)
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
-
+      
       if (token) {
         // Evitar múltiples pollings si ya se está procesando
         if (window.hasOwnProperty('_is_confirming_payment')) return;
@@ -212,24 +221,24 @@ const App: React.FC = () => {
         };
 
         showNotification('Verificando pago...', 'info');
-
+        
         let attempts = 0;
         const maxAttempts = 10; // 20 segundos total
         const pollStatus = async () => {
           try {
             const response = await fetch(getApiUrl(`payments/status/${token}`));
             const data = await response.json();
-
+            
             if (data.status === 'success' && data.paid) {
               // ¡ÉXITO!
               const updatedUser = { ...currentUser!, role: data.role || 'Colaborador Premium' };
               setCurrentUser(updatedUser);
               setIsAdminMode(isAdminUser(updatedUser));
               localStorage.setItem('cipress_user', JSON.stringify(updatedUser));
-
+              
               showNotification('¡Pago exitoso! Tu perfil ha sido actualizado.', 'success');
               setCurrentPage('dashboard'); // Navigate to dashboard on success
-
+              
               // Limpiar URL
               window.history.replaceState({}, document.title, "/");
               delete (window as any)._is_confirming_payment;
@@ -304,7 +313,7 @@ const App: React.FC = () => {
 
     window.addEventListener('mousemove', updateActivity);
     window.addEventListener('keypress', updateActivity);
-
+    
     return () => {
       window.removeEventListener('mousemove', updateActivity);
       window.removeEventListener('keypress', updateActivity);
@@ -344,7 +353,7 @@ const App: React.FC = () => {
   const handleNavigate = (page: Page, subPage?: string) => {
     // 1. REGLA GLOBAL: Solo se permiten ciertas páginas sin login
     const publicPages: Page[] = ['home', 'about', 'privacy-policy', 'terms-of-service', 'login', 'register', 'destacados'];
-
+    
     // Si no está logeado y moviéndose a una página protegida
     if (!currentUser && !publicPages.includes(page)) {
       setReturnToPage(page);
@@ -425,15 +434,15 @@ const App: React.FC = () => {
   const handleDeleteSponsor = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deletePremiumSponsor(id); setPremiumSponsors(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting sponsor"); } } };
 
   // Press Releases
-  const handleAddPressRelease = async (item: Omit<PressRelease, 'id'>) => {
-    try {
-      const res = await createPressRelease(item);
-      setPressReleases(prev => [res, ...prev]);
-      return true;
-    } catch (e: any) {
-      alert(e.message || "Error al crear el comunicado");
-      return false;
-    }
+  const handleAddPressRelease = async (item: Omit<PressRelease, 'id'>) => { 
+    try { 
+      const res = await createPressRelease(item); 
+      setPressReleases(prev => [res, ...prev]); 
+      return true; 
+    } catch (e: any) { 
+      alert(e.message || "Error al crear el comunicado"); 
+      return false; 
+    } 
   };
   const handleUpdatePressRelease = async (item: PressRelease) => { try { const res = await updatePressRelease(item); setPressReleases(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating press release"); } };
   const handleDeletePressRelease = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deletePressRelease(id); setPressReleases(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting press release"); } } };
@@ -605,29 +614,57 @@ const App: React.FC = () => {
     if (selectedJob) return <JobDetailPage job={selectedJob} onBack={() => setSelectedJob(null)} />;
     if (selectedPressRelease) return <PressReleaseDetailPage pressRelease={selectedPressRelease} onBack={() => setSelectedPressRelease(null)} />;
     if (selectedPhotoPost) return <PhotojournalismDetailPage post={selectedPhotoPost} onBack={() => setSelectedPhotoPost(null)} />;
-    if (selectedCourse) return <ModulePlaceholder title={`Curso: ${selectedCourse.title}`} sprint="Sprint 3" onBack={() => setSelectedCourse(null)} />;
+    if (selectedCourse) return <CourseDetailPage course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
     if (selectedSpecialist) return <SpecialistDetailPage specialist={selectedSpecialist} onBack={() => setSelectedSpecialist(null)} />;
     if (selectedFunding) return <FundingDetailPage funding={selectedFunding} onBack={() => setSelectedFunding(null)} />;
     if (selectedTalent) return <TalentDetailPage profile={selectedTalent} onBack={() => setSelectedTalent(null)} />;
 
     switch (currentPage) {
       case 'admin':
-        return <ModulePlaceholder title="Panel de Administración" sprint="Sprint 3" description="El panel integral de administración editorial está programado para el Sprint 3 según el cronograma." onBack={() => handleNavigate('home')} />;
-      case 'courses': return <ModulePlaceholder title="Capacitación y Cursos" sprint="Sprint 3" description="El catálogo interactivo de cursos y webinars para periodistas se lanzará en el Sprint 3." onBack={() => handleNavigate('home')} />;
-      case 'entrepreneurship': return <ModulePlaceholder title="Emprendimiento e Innovación" sprint="Sprint 3" description="El directorio de emprendimientos periodísticos estará disponible en el Sprint 3." onBack={() => handleNavigate('home')} />;
+        if (!isAdminUser(currentUser) || !isAdminMode) {
+          return <LoginPage onNavigate={handleNavigate} returnTo="home" onLoginSuccess={handleLogin} />;
+        }
+        return <AdminPanel
+          initialSection={initialTab}
+          courses={courses} onAddCourse={handleAddCourse} onUpdateCourse={handleUpdateCourse} onDeleteCourse={handleDeleteCourse}
+          jobs={jobs} onAddJob={handleAddJob} onUpdateJob={handleUpdateJob} onDeleteJob={handleDeleteJob}
+          freelanceServices={freelanceServices} onAddFreelanceService={handleAddFreelanceService} onUpdateFreelanceService={handleUpdateFreelanceService} onDeleteFreelanceService={handleDeleteFreelanceService}
+          entrepreneurs={entrepreneurs} onAddEntrepreneur={handleAddEntrepreneur} onUpdateEntrepreneur={handleUpdateEntrepreneur} onDeleteEntrepreneur={handleDeleteEntrepreneur}
+          newsArticles={newsArticles} onAddNewsArticle={handleAddNewsArticle} onUpdateNewsArticle={handleUpdateNewsArticle} onDeleteNewsArticle={handleDeleteNewsArticle}
+          destacados={destacados} onAddDestacado={handleAddDestacado} onUpdateDestacado={handleUpdateDestacado} onDeleteDestacado={handleDeleteDestacado}
+          sponsors={premiumSponsors} onAddSponsor={handleAddSponsor} onUpdateSponsor={handleUpdateSponsor} onDeleteSponsor={handleDeleteSponsor}
+          pressReleases={pressReleases} onAddPressRelease={handleAddPressRelease} onUpdatePressRelease={handleUpdatePressRelease} onDeletePressRelease={handleDeletePressRelease}
+          heroHeading={heroHeading} onUpdateHeroHeading={handleUpdateHeroHeading}
+          photojournalismPosts={photojournalismPosts} onAddPhotojournalismPost={handleAddPhotojournalismPost} onUpdatePhotojournalismPost={handleUpdatePhotojournalismPost} onDeletePhotojournalismPost={handleDeletePhotojournalismPost}
+          fundingOpportunities={fundingOpportunities} onAddFundingOpportunity={handleAddFundingOpportunity} onUpdateFundingOpportunity={handleUpdateFundingOpportunity} onDeleteFundingOpportunity={handleDeleteFundingOpportunity}
+          specialists={specialists} onAddSpecialist={handleAddSpecialist} onUpdateSpecialist={handleUpdateSpecialist} onDeleteSpecialist={handleDeleteSpecialist}
+          shareablePhotos={shareablePhotos} onAddShareablePhoto={handleAddShareablePhoto} onUpdateShareablePhoto={handleUpdateShareablePhoto} onDeleteShareablePhoto={handleDeleteShareablePhoto}
+          shortCollaborations={shortCollaborations} onAddShortCollaboration={handleAddShortCollaboration} onUpdateShortCollaboration={handleUpdateShortCollaboration} onDeleteShortCollaboration={handleDeleteShortCollaboration}
+          entrepreneurshipTips={entrepreneurshipTips} onAddEntrepreneurshipTip={handleAddEntrepreneurshipTip} onUpdateEntrepreneurshipTip={handleUpdateEntrepreneurshipTip} onDeleteEntrepreneurshipTip={handleDeleteEntrepreneurshipTip}
+          sponsoredAds={sponsoredAds} onAddSponsoredAd={handleAddSponsoredAd} onUpdateSponsoredAd={handleUpdateSponsoredAd} onDeleteSponsoredAd={handleDeleteSponsoredAd}
+          specialAds={specialAds} onUpdateSpecialAd={handleUpdateSpecialAd}
+          communityPosts={communityPosts} onAddCommunityPost={handleAddCommunityPostAdmin} onUpdateCommunityPost={handleUpdateCommunityPost} onDeleteCommunityPost={handleDeleteCommunityPost}
+          events={events} onAddEvent={handleAddEvent} onUpdateEvent={handleUpdateEvent} onDeleteEvent={handleDeleteEvent}
+          stats={stats} onUpdateStat={handleUpdateStat}
+          partnerLogos={partnerLogos} onAddPartnerLogo={handleAddPartnerLogo} onUpdatePartnerLogo={handleUpdatePartnerLogo} onDeletePartnerLogo={handleDeletePartnerLogo}
+          talentProfiles={talentProfiles} onAddTalentProfile={handleAddTalentProfile} onUpdateTalentProfile={handleUpdateTalentProfile} onDeleteTalentProfile={handleDeleteTalentProfile}
+          rotationInterval={rotationInterval} onUpdateRotationInterval={handleUpdateRotationInterval}
+          users={users} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser}
+        />;
+      case 'courses': return <CoursesModule courses={courses} onSelectCourse={handleSelectCourse} onBack={() => handleNavigate('home')} />;
+      case 'entrepreneurship': return <EntrepreneurshipModule entrepreneurships={entrepreneurs} onBack={() => handleNavigate('home')} />;
       case 'opportunities': return <OpportunitiesModule jobs={jobs} onSelectJob={handleSelectJob} initialTab={initialTab || 'jobs'} currentUser={currentUser} onNavigate={handleNavigate} rotationInterval={rotationInterval} onSelectTalent={handleSelectTalent} onBack={() => handleNavigate('home')} />;
-      case 'funding': return <ModulePlaceholder title="Fondos y Becas" sprint="Sprint 3" description="El directorio de fondos concursables y becas de investigación se integrará en el Sprint 3." onBack={() => handleNavigate('home')} />;
+      case 'funding': return <FundingModule fundingOpportunities={fundingOpportunities} onSelectFunding={handleSelectFunding} onBack={() => handleNavigate('home')} />;
       case 'destacados': return <DestacadosModule destacados={destacados} onSelectDestacado={handleSelectDestacado} onBack={() => handleNavigate('home')} />;
       case 'analysis': return <NewsModule newsArticles={newsArticles} onSelectNewsArticle={handleSelectNewsArticle} onBack={() => handleNavigate('home')} />;
-      case 'community-ads': return <ModulePlaceholder title="Avisos de la Comunidad" sprint="Sprint 3" description="El módulo de clasificados de la comunidad estará listo en el Sprint 3." onBack={() => handleNavigate('home')} />;
+      case 'community-ads': return <CommunityAdsModule ads={communityAds} onBack={() => handleNavigate('home')} />;
       case 'specialists': return <SpecialistsModule specialists={specialists} onSelectSpecialist={handleSelectSpecialist} onBack={() => handleNavigate('home')} />;
       case 'photo-gallery': return <PhotoGalleryModule shareablePhotos={shareablePhotos} onBack={() => handleNavigate('home')} />;
       case 'photojournalism': return <PhotojournalismModule posts={photojournalismPosts} onSelectPost={handleSelectPhotoPost} currentUser={currentUser} onPostUpdated={refreshPhotoPosts} onBack={() => handleNavigate('home')} onNavigate={handleNavigate} />;
-      case 'resources': return <ModulePlaceholder title="Recursos y Herramientas" sprint="Sprint 3" description="La biblioteca de herramientas periodísticas estará disponible en el Sprint 3." onBack={() => handleNavigate('home')} />;
-      case 'events': return <ModulePlaceholder title="Eventos y Webinars" sprint="Sprint 3" description="La agenda de eventos y talleres para profesionales de prensa se habilitará en el Sprint 3." onBack={() => handleNavigate('home')} />;
+      case 'resources': return <ResourcesModule resources={resources} onBack={() => handleNavigate('home')} />;
+      case 'events': return <EventsModule events={events} onBack={() => handleNavigate('home')} />;
       case 'legal': return <LegalModule onBack={() => handleNavigate('home')} />;
       case 'press-releases': return <PressReleasesModule pressReleases={pressReleases} onSelectPressRelease={handleSelectPressRelease} onBack={() => handleNavigate('home')} />;
-      case 'upload-press-release': return <PressReleaseUploadPage onSave={handleAddPressRelease} onNavigate={handleNavigate} />;
       case 'about': return <AboutPage onNavigate={handleNavigate} />;
       case 'privacy-policy': return <PrivacyPolicyPage onNavigate={handleNavigate} />;
       case 'terms-of-service': return <TermsOfServicePage onNavigate={handleNavigate} />;
@@ -636,7 +673,51 @@ const App: React.FC = () => {
       case 'login': return <LoginPage onNavigate={handleNavigate} returnTo={returnToPage} onLoginSuccess={handleLogin} />;
       case 'dashboard': {
         if (!currentUser) return <LoginPage onNavigate={handleNavigate} returnTo="dashboard" onLoginSuccess={handleLogin} />;
-        return <UserDashboard currentUser={currentUser} onLogout={handleLogout} onNavigate={handleNavigate} onOpenPressRelease={() => handleNavigate('upload-press-release')} />;
+        
+        // Blindaje de Roles: Normalizar a minúsculas y aplicar lógica estricta con Fallback
+        const userRole = (currentUser.role || '').toLowerCase();
+        const isCliente = userRole === 'cliente';
+
+        if (isCliente) {
+           return <ClienteDashboard
+             currentUser={currentUser}
+             onLogout={handleLogout}
+             premiumSponsors={premiumSponsors}
+             onAddSponsor={handleAddSponsor}
+             onUpdateSponsor={handleUpdateSponsor}
+           />;
+        } else {
+           // Administrador, Colaborador Premium y Colaborador Gratis -> Panel Completo (Controlado internamente por rol)
+           return <UserDashboard 
+             currentUser={currentUser} 
+             onLogout={handleLogout} 
+             onNavigate={handleNavigate} 
+             onUpdateProfile={handleUpdateProfile}
+             premiumSponsors={premiumSponsors}
+             onAddSponsor={handleAddSponsor}
+             onUpdateSponsor={handleUpdateSponsor}
+             pressReleases={pressReleases}
+             onAddPressRelease={handleAddPressRelease}
+             onUpdatePressRelease={handleUpdatePressRelease}
+             onDeletePressRelease={handleDeletePressRelease}
+             onGalleriesUpdated={refreshGalleries}
+             shortCollaborations={shortCollaborations}
+             onAddShortCollaboration={handleAddShortCollaboration}
+             onUpdateShortCollaboration={handleUpdateShortCollaboration}
+             onDeleteShortCollaboration={handleDeleteShortCollaboration}
+             initialSection={
+               initialTab === 'talent' ? 'Mi Perfil de Talento' : 
+               initialTab === 'comunicado' ? 'Redactar Comunicado' : 
+               initialTab === 'emprendimiento' ? 'Confían en CiPress' : 
+               initialTab === 'pyme' ? 'Mis Pymes' :
+               initialTab === 'galeria' ? 'Mis Galerías' :
+               initialTab === 'comunicados' ? 'Redactar Comunicado' :
+               initialTab === 'specialist' ? 'Mis Fuentes Especializadas' :
+               initialTab === 'urgentes' ? 'Colaboraciones Urgentes' :
+               'Mi Perfil'
+             }
+           />;
+        }
       }
       case 'home':
       default:

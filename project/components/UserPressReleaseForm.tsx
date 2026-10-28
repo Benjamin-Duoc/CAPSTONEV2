@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { PressRelease } from '../types';
 import ContentEditor from './admin/ContentEditor';
+import AIWritingAssistant from './ai/AIWritingAssistant';
 
 interface UserPressReleaseFormProps {
     onSave: (pressRelease: Omit<PressRelease, 'id'>) => void;
@@ -81,7 +82,15 @@ const UserPressReleaseForm: React.FC<UserPressReleaseFormProps> = ({ onSave, onC
                             {/* Title & Basics */}
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-black uppercase text-text-primary mb-2">Título del Comunicado</label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-black uppercase text-text-primary">Título del Comunicado</label>
+                                        <AIWritingAssistant
+                                            currentText={formData.title}
+                                            context="title"
+                                            buttonLabel="Asistir Título"
+                                            onApplyText={(newText) => setFormData(prev => ({ ...prev, title: newText }))}
+                                        />
+                                    </div>
                                     <input 
                                         type="text" 
                                         name="title" 
@@ -103,7 +112,15 @@ const UserPressReleaseForm: React.FC<UserPressReleaseFormProps> = ({ onSave, onC
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-black uppercase text-text-primary mb-2">Breve Resumen (máx 130 carac.)</label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-black uppercase text-text-primary">Breve Resumen (máx 130 carac.)</label>
+                                        <AIWritingAssistant
+                                            currentText={formData.summary}
+                                            context="summary"
+                                            buttonLabel="Sintetizar Bajada"
+                                            onApplyText={(newText) => setFormData(prev => ({ ...prev, summary: newText.slice(0, 130) }))}
+                                        />
+                                    </div>
                                     <textarea 
                                         name="summary" 
                                         value={formData.summary} 

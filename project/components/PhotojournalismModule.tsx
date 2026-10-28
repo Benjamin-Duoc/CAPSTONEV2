@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import type { PhotojournalismPost, User } from '../types';
 import { WhatsAppIcon } from './icons';
 import { getPhotojournalismPosts as getPhotoPosts, createPhotojournalismPost as insertPhotoPost, updatePhotojournalismPost as updatePhotoPost, uploadImage, deletePhotojournalismPost as deletePhotoPost } from '../utils/db';
+import AIWritingAssistant from './ai/AIWritingAssistant';
 
 interface PhotojournalismModuleProps {
     posts?: PhotojournalismPost[];
@@ -329,7 +330,15 @@ const PhotojournalismModule: React.FC<PhotojournalismModuleProps> = ({ posts = [
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Descripción / Epígrafe</label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-sm font-medium text-gray-700">Descripción / Epígrafe</label>
+                                <AIWritingAssistant
+                                    currentText={uploadForm.caption}
+                                    context="caption"
+                                    buttonLabel="Asistir Epígrafe"
+                                    onApplyText={(newText) => setUploadForm({ ...uploadForm, caption: newText })}
+                                />
+                            </div>
                             <textarea
                                 required
                                 rows={3}

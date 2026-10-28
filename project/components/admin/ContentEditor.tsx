@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ReportContentItem } from '../../types';
 import { DragHandleIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../icons';
+import AIWritingAssistant from '../ai/AIWritingAssistant';
 
 interface ContentEditorProps {
     content: ReportContentItem[];
@@ -128,7 +129,25 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
             case 'paragraph':
                 itemContent = (
                     <>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Párrafo #{index + 1}</label>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-medium text-gray-500">Párrafo #{index + 1}</label>
+                            <AIWritingAssistant
+                                currentText={item.text}
+                                onApplyText={(val) => handleReportContentChange(index, 'text', val)}
+                                onAppendText={(val) => handleReportContentChange(index, 'text', item.text ? `${item.text} ${val}` : val)}
+                                onInsertBlock={(type, data) => {
+                                    const newContent = [...content];
+                                    if (type === 'paragraph') {
+                                        newContent.splice(index + 1, 0, { type: 'paragraph', text: data.text });
+                                    } else if (type === 'quote') {
+                                        newContent.splice(index + 1, 0, { type: 'quote', text: data.text, author: data.author || '' });
+                                    }
+                                    onChange(newContent);
+                                }}
+                                context="paragraph"
+                                compact={true}
+                            />
+                        </div>
                         <textarea
                             value={item.text}
                             onChange={(e) => handleReportContentChange(index, 'text', e.target.value)}
@@ -141,7 +160,16 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
             case 'image':
                 itemContent = (
                     <>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Imagen</label>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-medium text-gray-500">Imagen</label>
+                            <AIWritingAssistant
+                                currentText={item.alt}
+                                onApplyText={(val) => handleReportContentChange(index, 'alt', val)}
+                                context="caption"
+                                buttonLabel="Pie de foto"
+                                compact={true}
+                            />
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-4 items-start">
                             <div className="w-full sm:w-1/3 bg-gray-100 rounded-md flex items-center justify-center p-2 border border-gray-200">
                                 <img src={item.src} alt={item.alt} className="max-h-32 object-contain" />
@@ -151,7 +179,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
                                 <button type="button" onClick={() => handleImageUpload(index)} className="text-xs px-3 py-1 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200">
                                     Subir imagen...
                                 </button>
-                                <input type="text" placeholder="Texto alternativo (alt)" value={item.alt} onChange={(e) => handleReportContentChange(index, 'alt', e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-sm mt-1" />
+                                <input type="text" placeholder="Texto alternativo o epígrafe (alt)" value={item.alt} onChange={(e) => handleReportContentChange(index, 'alt', e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-sm mt-1" />
                             </div>
                         </div>
                     </>
@@ -160,7 +188,24 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
             case 'quote':
                 itemContent = (
                     <>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Cita</label>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-medium text-gray-500">Cita</label>
+                            <AIWritingAssistant
+                                currentText={item.text}
+                                onApplyText={(val) => handleReportContentChange(index, 'text', val)}
+                                onInsertBlock={(type, data) => {
+                                    const newContent = [...content];
+                                    if (type === 'paragraph') {
+                                        newContent.splice(index + 1, 0, { type: 'paragraph', text: data.text });
+                                    } else if (type === 'quote') {
+                                        newContent.splice(index + 1, 0, { type: 'quote', text: data.text, author: data.author || '' });
+                                    }
+                                    onChange(newContent);
+                                }}
+                                context="quote"
+                                compact={true}
+                            />
+                        </div>
                         <textarea value={item.text} onChange={(e) => handleReportContentChange(index, 'text', e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm italic" rows={2} placeholder="Texto de la cita" />
                         <input type="text" placeholder="Autor (opcional)" value={item.author || ''} onChange={(e) => handleReportContentChange(index, 'author', e.target.value)} className="mt-2 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-sm" />
                     </>
@@ -190,14 +235,24 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
     return (
         <div className="space-y-4">
             <div className="p-4 border rounded-lg bg-blue-50/50 border-blue-100">
-                <label htmlFor="bulkText" className="block text-sm font-medium text-blue-900 mb-1">Añadir texto masivo (automáticamente crea parrafos)</label>
+                <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="bulkText" className="block text-sm font-medium text-blue-900">Añadir texto masivo (automáticamente crea párrafos)</label>
+                    <AIWritingAssistant
+                        currentText={bulkText}
+                        onApplyText={(val) => setBulkText(val)}
+                        onAppendText={(val) => setBulkText(bulkText ? `${bulkText}\n\n${val}` : val)}
+                        context="press_release"
+                        buttonLabel="Asistir texto"
+                        compact={true}
+                    />
+                </div>
                 <textarea
                     id="bulkText"
                     value={bulkText}
                     onChange={(e) => setBulkText(e.target.value)}
                     className="block w-full border border-blue-200 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     rows={4}
-                    placeholder="Pega tu texto completo aquí..."
+                    placeholder="Pega tu texto completo aquí o redacta con apoyo de IA..."
                 />
                 <button type="button" onClick={handleAddBulkParagraphs} className="mt-2 text-sm px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors">
                     Generar Párrafos
@@ -216,7 +271,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
 
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200">
                 <span className="text-sm font-medium text-gray-700 mr-2">Añadir bloque:</span>
-                <button type="button" onClick={() => handleAddBulkParagraphs()} className="hidden" /> {/* Hidden trigger mostly for logic consistency if needed */}
                 <button type="button" onClick={() => handleAddItem('image')} className="text-xs px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 flex items-center">
                     + Imagen
                 </button>
@@ -226,6 +280,21 @@ const ContentEditor: React.FC<ContentEditorProps> = ({ content, onChange }) => {
                 <button type="button" onClick={() => onChange([...content, { type: 'paragraph', text: '' }])} className="text-xs px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 flex items-center">
                     + Párrafo vacío
                 </button>
+                <div className="ml-auto">
+                    <AIWritingAssistant
+                        currentText={content.map(c => ('text' in c ? c.text : '')).filter(Boolean).join('\n\n')}
+                        onApplyText={(val) => {
+                            const newParagraphs = val.split(/\n+/).filter(p => p.trim() !== '').map(p => ({ type: 'paragraph' as const, text: p }));
+                            onChange([...content, ...newParagraphs]);
+                        }}
+                        onInsertBlock={(type, data) => {
+                            if (type === 'paragraph') onChange([...content, { type: 'paragraph', text: data.text }]);
+                            if (type === 'quote') onChange([...content, { type: 'quote', text: data.text, author: data.author || '' }]);
+                        }}
+                        context="press_release"
+                        buttonLabel="Asistente IA CiPress"
+                    />
+                </div>
             </div>
         </div>
     );

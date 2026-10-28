@@ -6,7 +6,7 @@ import type { Page, Job, Course, Entrepreneurship, NewsArticle, PremiumSponsor, 
 import UserPressReleaseForm from './UserPressReleaseForm';
 import UserSpecialistForm from './UserSpecialistForm';
 import { EntrepreneurshipCard } from './EntrepreneurshipCard';
-import { CourseCard } from './CourseCard';
+import { CourseCard } from './CoursesModule';
 
 interface HomePageProps {
     onNavigate: (page: Page, subPage?: string) => void;
@@ -409,7 +409,7 @@ const FeaturedSourceCard: React.FC<{ specialist: Specialist; onSelect: () => voi
     if (!specialist) return null;
 
     return (
-        <div
+        <div 
             onClick={onSelect}
             className="bg-surface p-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group border border-transparent hover:border-secondary/20"
         >
@@ -506,7 +506,7 @@ const ResourceCard: React.FC<{ resource: Resource }> = ({ resource }) => (
 );
 
 const FundingCard: React.FC<{ item: FundingOpportunity; onSelect: () => void }> = ({ item, onSelect }) => (
-    <div
+    <div 
         onClick={onSelect}
         className="bg-surface p-4 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300 flex flex-col cursor-pointer hover:border-primary/30 group"
     >
@@ -611,7 +611,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
     const shuffledSpecialists = useMemo(() => {
         const intervalMilliseconds = (rotationInterval || 1) * 60 * 60 * 1000;
         const timeSeed = Math.floor(Date.now() / intervalMilliseconds);
-
+        
         const seededShuffle = (array: any[]) => {
             let seed = timeSeed;
             const seededRandom = () => {
@@ -636,7 +636,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
     const shuffledFunding = useMemo(() => {
         const intervalMilliseconds = (rotationInterval || 1) * 60 * 60 * 1000;
         const timeSeed = Math.floor(Date.now() / intervalMilliseconds);
-
+        
         const seededShuffle = (array: any[]) => {
             let seed = timeSeed;
             const seededRandom = () => {
@@ -681,7 +681,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
             }
         };
         fetchFeatured();
-
+        
         // Refresh every minute to ensure smooth hourly transitions without reloading
         const interval = setInterval(fetchFeatured, 60000);
         return () => clearInterval(interval);
@@ -708,7 +708,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
     const handleUploadClick = () => {
         onNavigate('dashboard', 'comunicado');
     };
-
+    
     const handleEntrepreneurUploadClick = () => {
         onNavigate('dashboard', 'pyme');
     };
@@ -775,7 +775,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                 <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-3xl font-bold" aria-label="Cerrar modal">&times;</button>
                 {currentUser ? (
                     <div className="text-left">
-                        <UserSpecialistForm onSave={onAddSpecialist || (() => { })} onClose={onClose} />
+                        <UserSpecialistForm onSave={onAddSpecialist || (() => {})} onClose={onClose} />
                     </div>
                 ) : (
                     <>
@@ -1119,8 +1119,8 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                         {/* Courses Section */}
                         <section>
                             <div className="flex justify-between items-center border-b-2 border-primary pb-2 mb-6">
-                                <h2
-                                    onClick={() => onNavigate('courses')}
+                                <h2 
+                                    onClick={() => onNavigate('courses')} 
                                     className="text-3xl font-bold font-serif text-text-primary cursor-pointer hover:text-primary transition-colors"
                                 >
                                     Capacitación
@@ -1222,7 +1222,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                     <h3 className="font-semibold text-base text-green-800">¿Quieres iniciar un debate?</h3>
                                     <p className="text-xs text-green-700">Comparte enlaces, ideas y opiniones con la comunidad de innovadores.</p>
                                 </div>
-                                <button
+                                 <button
                                     onClick={() => {
                                         if (currentUser) {
                                             onNavigate('community-post');
@@ -1252,7 +1252,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                     <h3 className="font-semibold text-base text-primary">¿Capturaste un momento noticioso?</h3>
                                     <p className="text-xs text-orange-800">Con tu suscripción gratuita, publica tu acierto y dale difusión a tu perspectiva.</p>
                                 </div>
-                                <button
+                                 <button
                                     onClick={() => {
                                         if (currentUser) {
                                             onNavigate('dashboard', 'galeria');
@@ -1293,7 +1293,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                             <div className="space-y-4">
                                 {shortCollaborations.slice(0, 2).map(collab => <ShortCollaborationCard key={collab.id} collaboration={collab} />)}
                             </div>
-                            <button
+                              <button
                                 onClick={() => {
                                     if (currentUser) {
                                         onNavigate('dashboard', 'urgentes');
@@ -1347,10 +1347,10 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                             </div>
                             <div className="space-y-4">
                                 {shuffledFunding.slice(0, 4).map(item => (
-                                    <FundingCard
-                                        key={item.id}
-                                        item={item}
-                                        onSelect={() => onSelectFunding(item)}
+                                    <FundingCard 
+                                        key={item.id} 
+                                        item={item} 
+                                        onSelect={() => onSelectFunding(item)} 
                                     />
                                 ))}
                             </div>
@@ -1396,7 +1396,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                     >
                                         Ver más
                                     </button>
-                                    <button
+                                     <button
                                         onClick={() => {
                                             if (currentUser) {
                                                 onNavigate('dashboard', 'comunicados');
@@ -1446,7 +1446,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                             <h3 className="font-semibold text-base text-secondary">¿Tienes material gráfico para vender o compartir? ¿Haces fotografía profesional para eventos?</h3>
                             <p className="text-xs text-blue-800">Sube una muestra de tu trabajo y sé contactado por quienes lo buscan.</p>
                         </div>
-                        <button
+                         <button
                             onClick={() => {
                                 if (currentUser) {
                                     onNavigate('dashboard', 'galeria');
@@ -1488,7 +1488,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                 <span className="mt-6 inline-block font-bold text-[#ffcd38] group-hover:text-yellow-300 transition-colors uppercase text-sm tracking-widest">Inscribirse &rarr;</span>
                             </button>
 
-                            <button
+                            <button 
                                 onClick={() => {
                                     if (currentUser) {
                                         onNavigate('opportunities', 'freelance');
@@ -1496,9 +1496,9 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                         setLoginGuardRedirect('freelance-services');
                                         setIsLoginGuardOpen(true);
                                     }
-                                }}
+                                }} 
                                 className="bg-white/10 p-6 lg:p-8 rounded-lg text-center hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-1 group border border-transparent hover:border-white/20 flex flex-col h-full w-full"
-                            >
+                             >
                                 <div className="inline-flex justify-center items-center w-16 h-16 bg-[#ffcd38] rounded-full mx-auto mb-6 shadow-lg">
                                     <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                 </div>
@@ -1525,8 +1525,8 @@ const HomePage: React.FC<HomePageProps> = (props) => {
             {isPhotoModalOpen && <PhotoPublicationModal onClose={() => setIsPhotoModalOpen(false)} />}
             {isCommunityAdModalOpen && <CommunityAdPublicationModal onClose={() => setIsCommunityAdModalOpen(false)} />}
             {isPhotojournalismModalOpen && <PhotojournalismPublicationModal onClose={() => setIsPhotojournalismModalOpen(false)} />}
-            {isCollaborationModalOpen && <CollaborationPublicationModal onClose={() => setIsCollaborationModalOpen(false)} />}
-
+             {isCollaborationModalOpen && <CollaborationPublicationModal onClose={() => setIsCollaborationModalOpen(false)} />}
+            
             {isLoginGuardOpen && (
                 <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-[100] p-4 animate-fade-in" onClick={() => setIsLoginGuardOpen(false)}>
                     <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md text-center relative transform transition-all animate-scale-in" onClick={e => e.stopPropagation()}>
