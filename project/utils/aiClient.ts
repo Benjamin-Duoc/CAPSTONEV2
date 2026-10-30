@@ -132,3 +132,28 @@ function generateClientFallback(req: AIAssistRequest): string {
             return text;
     }
 }
+
+
+export const requestImageHashtags = async (imageBase64: string, mimeType: string = 'image/jpeg'): Promise<string[]> => {
+    try {
+        const response = await fetch(`${API_BASE}/ai/image-hashtags`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image_base64: imageBase64,
+                mime_type: mimeType
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return data.hashtags || [];
+        }
+    } catch (error) {
+        console.error("Error solicitando hashtags para la imagen:", error);
+    }
+    // Si falla o no hay conexión, devuelve etiquetas por defecto
+    return ["#Fotoperiodismo", "#Chile", "#Prensa", "#Actualidad"];
+};

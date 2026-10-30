@@ -30,6 +30,7 @@ class AIService:
         "gemini-flash-latest"
     ]
 
+
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.environ.get('GEMINI_API_KEY')
         if not self.api_key:
@@ -43,6 +44,8 @@ class AIService:
             except Exception:
                 pass
         self.active_model = "gemini-flash-lite-latest"
+
+    
 
     def assist(self, text: str, action: str, custom_prompt: str = None, target_tone: str = None, target_lang: str = None, context: str = None) -> dict:
         """
@@ -98,6 +101,86 @@ class AIService:
             "action": action,
             "source": "cipress_local_engine",
             "cached": False
+        }
+
+    def generate_image_hashtags(self, image_base64: str, mime_type: str = "image/jpeg") -> dict:
+        """
+        Analiza una imagen en Base64 usando Gemini Visión y extrae hashtags periodísticos.
+        """
+        # 1. Limpiar el Base64 por si el navegador envía el prefijo data:image/...;base64,
+        if "," in image_base64:
+            header, image_base64 = image_base64.split(",", 1)
+            if "image/png" in header:
+                mime_type = "image/png"
+            elif "image/webp" in header:
+                mime_type = "image/webp"
+
+        image_base64 = image_base64.strip().replace("\n", "").replace("\r", "")
+
+        # 2. Si hay API Key, consultar a Gemini Multimodal
+        if self.api_key:
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "inline_data": {
+                                    "mime_type": mime_type,
+                                    "data": image_base64
+                                }
+                            },
+                            {
+                                "text": (
+                                    "Eres un editor fotoperiodístico experto. Analiza detalladamente esta fotografía "
+                                    "(sujetos, acciones, lugar, contexto informativo) y genera entre 6 y 10 hashtags "
+                                    "relevantes en español para catalogación y búsqueda. "
+                                    "Reglas estrictas:\n"
+                                    "1. Cada hashtag debe iniciar con '#' sin espacios (ej: #Santiago, #Manifestacion, #Chile).\n"
+                                    "2. Devuelve ÚNICAMENTE los hashtags separados por comas, sin introducciones ni comentarios."
+                                )
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "maxOutputTokens": 300
+                }
+            }
+
+            for model_name in self.MODELS_TO_TRY:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=20)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                            # Convertir la respuesta de comas a una lista limpia de hashtags
+                            raw_tags = [t.strip() for t in raw_text.replace("\n", ",").split(",") if t.strip()]
+                            hashtags = []
+                            for t in raw_tags:
+                                tag = t if t.startswith("#") else f"#{t}"
+                                if tag not in hashtags and len(tag) > 1:
+                                    hashtags.append(tag)
+                            
+                            if hashtags:
+                                return {
+                                    "status": "success",
+                                    "hashtags": hashtags,
+                                    "source": "gemini",
+                                    "model": model_name
+                                }
+                except Exception as e:
+                    logger.warning(f"Error procesando imagen con {model_name}: {e}")
+
+        # 3. Modo de respaldo si no hay internet o falla la API
+        return {
+            "status": "success",
+            "hashtags": ["#Fotoperiodismo", "#Chile", "#Prensa", "#Actualidad", "#Reportaje"],
+            "source": "cipress_local_fallback"
         }
 
     def _build_prompt(self, text: str, action: str, custom_prompt: str, target_tone: str, target_lang: str, context: str) -> str:

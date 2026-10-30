@@ -1,11 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { User, PhotojournalismPost, ShareablePhoto } from '../../types';
-import { 
-    PhotoIcon, XMarkIcon, MagnifyingGlassIcon, CalendarIcon, 
-    ArrowUpTrayIcon, CurrencyDollarIcon, TagIcon, TrashIcon, SparklesIcon
+import {
+    PhotoIcon, XMarkIcon, MagnifyingGlassIcon, CalendarIcon,
+    ArrowUpTrayIcon, CurrencyDollarIcon, TagIcon, TrashIcon, SparklesIcon,
+    PlusIcon
 } from '@heroicons/react/24/outline';
 import AIWritingAssistant from '../ai/AIWritingAssistant';
 import { ENV } from '../../src/config/env';
+import { requestImageHashtags } from '../../utils/aiClient';
+
+
 
 const API_BASE = ENV.isDevelopment ? '/api' : ENV.apiUrl;
 
@@ -32,11 +36,27 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0); // 0 to 100
     const [uploadStatusText, setUploadStatusText] = useState('');
-    
+
     // Metadatos comunes a aplicar a todo el lote
     const [batchTitle, setBatchTitle] = useState('');
     const [batchCaption, setBatchCaption] = useState('');
     const [batchPrice, setBatchPrice] = useState('');
+    // Estados para Hashtags con IA
+    const [hashtags, setHashtags] = useState<string[]>([]);
+    const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+    const [customTagInput, setCustomTagInput] = useState('');
+    const handleAddCustomTag = () => {
+        const clean = customTagInput.trim();
+        if (!clean) return;
+        const formatted = clean.startsWith('#') ? clean : `#${clean}`;
+        if (!hashtags.includes(formatted)) {
+            setHashtags(prev => [...prev, formatted]);
+        }
+        setCustomTagInput('');
+    };
+    const handleRemoveTag = (tagToRemove: string) => {
+        setHashtags(prev => prev.filter(t => t !== tagToRemove));
+    };
 
     // Listas locales (en una app real vendrían del backend)
     const [photoPosts, setPhotoPosts] = useState<PhotojournalismPost[]>([]);
@@ -65,8 +85,8 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const filesArray = Array.from(e.target.files);
-            
+            const filesArray: File[] = Array.from(e.target.files);
+
             if (activeTab === 'periodismo') {
                 // Solo 1 foto para Foto-Periodismo
                 setSelectedFiles([filesArray[0]]);
@@ -77,6 +97,33 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                     return;
                 }
                 setSelectedFiles(prev => [...prev, ...filesArray]);
+            }
+
+            // Escaneo automático con IA de la foto seleccionada
+            if (filesArray.length > 0) {
+                const fileToScan: File = filesArray[0];
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    const base64Data = reader.result as string;
+                    setIsAnalyzingImage(true);
+                    try {
+                        const suggested = await requestImageHashtags(base64Data, fileToScan.type);
+                        if (suggested && suggested.length > 0) {
+                            setHashtags(prev => {
+                                const merged = [...prev];
+                                suggested.forEach(tag => {
+                                    if (!merged.includes(tag)) merged.push(tag);
+                                });
+                                return merged;
+                            });
+                        }
+                    } catch (err) {
+                        console.error("Error analizando imagen:", err);
+                    } finally {
+                        setIsAnalyzingImage(false);
+                    }
+                };
+                reader.readAsDataURL(fileToScan);
             }
         }
     };
@@ -110,11 +157,11 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
             setUploadStatusText(`Subiendo foto ${i + 1} de ${total}...`);
-            
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('folder', 'images/galleries');
-            
+
             if (activeTab === 'galeria') {
                 formData.append('watermark', 'true');
             }
@@ -124,13 +171,13 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (uploadRes.ok) {
                     const uploadData = await uploadRes.json();
-                    
+
                     const newEntry = activeTab === 'periodismo' ? {
                         title: batchTitle,
-                        caption: batchCaption,
+                        caption: hashtags.length > 0 ? `${batchCaption}\n\n${hashtags.join(' ')}` : batchCaption,
                         image_url: uploadData.url.replace('/media/', '/backendcipress/media/'),
                         date_taken: new Date().toISOString().split('T')[0],
                         date_added: new Date().toISOString(),
@@ -142,12 +189,12 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                         original_image_url: uploadData.url.replace('/media/', '/backendcipress/media/'),
                         watermarked_image_url: uploadData.watermarked_url ? uploadData.watermarked_url.replace('/media/', '/backendcipress/media/') : null,
                         price: batchPrice,
-                        keywords: JSON.stringify([batchTitle]),
+                        keywords: JSON.stringify(hashtags.length > 0 ? hashtags : [batchTitle]),
                         date_added: new Date().toISOString(),
                         photographer_name: `${user.firstName} ${user.lastName}`,
                         user_id: user.id
                     };
-                    
+
                     const endpoint = activeTab === 'periodismo' ? `${API_BASE}/photojournalism-posts` : `${API_BASE}/shareable-photos`;
                     const saveRes = await fetch(endpoint, {
                         method: 'POST',
@@ -173,7 +220,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
             } catch (err) {
                 console.error("Error subiendo el archivo", file.name, err);
             }
-            
+
             setUploadProgress(Math.round(((i + 1) / total) * 100));
         }
 
@@ -183,9 +230,9 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
         setBatchTitle('');
         setBatchCaption('');
         setBatchPrice('');
-        
+
         if (onGalleriesUpdated) onGalleriesUpdated();
-        
+
         alert(`¡Subida completada! Se guardaron ${successCount} de ${total} fotos.`);
     };
 
@@ -213,7 +260,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
 
     const renderPhotoList = () => {
         if (activeTab === 'periodismo') {
-            const filtered = photoPosts.filter((p: any) => 
+            const filtered = photoPosts.filter((p: any) =>
                 (p.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) &&
                 (!dateFilter || p.date_added?.startsWith(dateFilter) || p.date_taken?.startsWith(dateFilter))
             );
@@ -225,7 +272,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                 <img src={p.image_url} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             </div>
                             <div className="p-4 relative">
-                                <button 
+                                <button
                                     onClick={() => handleDeletePhoto(p.id, 'periodismo')}
                                     className="absolute bottom-4 right-4 text-gray-400 hover:text-red-600 transition-colors"
                                     title="Eliminar foto"
@@ -242,7 +289,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                 </div>
             );
         } else {
-            const filtered = shareablePhotos.filter((p: any) => 
+            const filtered = shareablePhotos.filter((p: any) =>
                 (p.caption?.toLowerCase() || '').includes(searchQuery.toLowerCase()) &&
                 (!dateFilter || p.date_added?.startsWith(dateFilter))
             );
@@ -259,7 +306,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                 )}
                             </div>
                             <div className="p-4 relative">
-                                <button 
+                                <button
                                     onClick={() => handleDeletePhoto(p.id, 'galeria')}
                                     className="absolute bottom-4 right-4 text-gray-400 hover:text-red-600 transition-colors"
                                     title="Eliminar foto"
@@ -290,7 +337,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-8 flex space-x-8">
                 <button
-                    onClick={() => { 
+                    onClick={() => {
                         if (activeTab === 'periodismo') return;
                         if (selectedFiles.length > 0) {
                             if (!window.confirm('Tienes fotos pendientes por subir. ¿Deseas descartarlas y cambiar de sección?')) return;
@@ -299,19 +346,18 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                         setBatchTitle('');
                         setBatchCaption('');
                         setBatchPrice('');
-                        setActiveTab('periodismo'); 
-                        window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                        setActiveTab('periodismo');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
-                    className={`pb-4 text-lg font-bold transition-colors whitespace-nowrap ${
-                        activeTab === 'periodismo'
-                            ? 'text-primary border-b-2 border-primary'
-                            : 'text-gray-400 hover:text-gray-600'
-                    }`}
+                    className={`pb-4 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === 'periodismo'
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-gray-400 hover:text-gray-600'
+                        }`}
                 >
                     Foto-Periodismo
                 </button>
                 <button
-                    onClick={() => { 
+                    onClick={() => {
                         if (activeTab === 'galeria') return;
                         if (selectedFiles.length > 0) {
                             if (!window.confirm('Tienes fotos pendientes por subir. ¿Deseas descartarlas y cambiar de sección?')) return;
@@ -320,14 +366,13 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                         setBatchTitle('');
                         setBatchCaption('');
                         setBatchPrice('');
-                        setActiveTab('galeria'); 
-                        window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                        setActiveTab('galeria');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
-                    className={`pb-4 text-lg font-bold transition-colors whitespace-nowrap ${
-                        activeTab === 'galeria'
-                            ? 'text-primary border-b-2 border-primary'
-                            : 'text-gray-400 hover:text-gray-600'
-                    }`}
+                    className={`pb-4 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === 'galeria'
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-gray-400 hover:text-gray-600'
+                        }`}
                 >
                     Galería Fotográfica (Ventas)
                 </button>
@@ -339,14 +384,14 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                     <ArrowUpTrayIcon className="w-5 h-5 mr-2 text-primary" />
                     Subir Nuevas Fotografías
                 </h3>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Área de archivos */}
                     <div>
                         <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 hover:bg-white hover:border-primary transition-colors text-center">
-                            <input 
-                                type="file" 
-                                multiple={activeTab === 'galeria'} 
+                            <input
+                                type="file"
+                                multiple={activeTab === 'galeria'}
                                 accept="image/jpeg,image/png,image/jfif"
                                 onChange={handleFileSelect}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -357,7 +402,74 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                             <p className="text-sm text-gray-500">
                                 {activeTab === 'periodismo' ? '1 foto por reportaje (JPG, PNG, JFIF)' : 'Máximo 20 fotos por subida (JPG, PNG, JFIF)'}
                             </p>
-                            {activeTab === 'galeria' && (
+                                                    {/* Módulo de Hashtags Inteligentes con IA */}
+                        <div className="bg-orange-50/60 p-4 rounded-xl border border-orange-200/70 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center text-xs font-bold text-gray-700 uppercase tracking-wide">
+                                    <TagIcon className="w-4 h-4 mr-1.5 text-primary" />
+                                    Hashtags y Etiquetas Temáticas
+                                </label>
+                                {isAnalyzingImage && (
+                                    <span className="flex items-center text-xs font-semibold text-primary animate-pulse">
+                                        <SparklesIcon className="w-4 h-4 mr-1 animate-spin" />
+                                        Escaneando imagen con IA...
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Lista de Hashtags en formato Chips/Pills */}
+                            <div className="flex flex-wrap gap-1.5 min-h-[32px] items-center">
+                                {hashtags.length === 0 && !isAnalyzingImage && (
+                                    <span className="text-xs text-gray-500 italic">
+                                        Selecciona una foto arriba para que la IA sugiera hashtags automáticamente o escribe los tuyos abajo.
+                                    </span>
+                                )}
+
+                                {hashtags.map((tag, idx) => (
+                                    <span 
+                                        key={idx} 
+                                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white text-orange-900 border border-orange-200 shadow-sm"
+                                    >
+                                        {tag}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveTag(tag)}
+                                            className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                            title="Eliminar etiqueta"
+                                        >
+                                            <XMarkIcon className="w-3.5 h-3.5" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+
+                            {/* Input para que el usuario agregue sus propios hashtags */}
+                            <div className="flex gap-2 pt-1">
+                                <input
+                                    type="text"
+                                    value={customTagInput}
+                                    onChange={e => setCustomTagInput(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAddCustomTag();
+                                        }
+                                    }}
+                                    placeholder="Escribe tu propio hashtag (ej: #Valparaíso) y presiona Enter..."
+                                    className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleAddCustomTag}
+                                    className="inline-flex items-center px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-orange-600 transition-all shadow-sm"
+                                >
+                                    <PlusIcon className="w-3.5 h-3.5 mr-1" />
+                                    Añadir
+                                </button>
+                            </div>
+                        </div>
+
+                        {activeTab === 'galeria' && (
                                 <p className="mt-4 text-xs font-bold text-orange-600 bg-orange-50 inline-block px-3 py-1 rounded-full">
                                     Se aplicará marca de agua CiPress automáticamente
                                 </p>
@@ -417,7 +529,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                 <span className="text-gray-600">Análisis visual directo de fotos y sugerencia de etiquetas temáticas automáticas.</span>
                             </div>
                         </div>
-                        
+
                         <div>
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide">
@@ -430,7 +542,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                     onApplyText={(newText) => setBatchTitle(newText)}
                                 />
                             </div>
-                            <input 
+                            <input
                                 type="text" value={batchTitle} onChange={e => setBatchTitle(e.target.value)} disabled={isUploading}
                                 className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-lg py-2 px-3 focus:bg-white focus:ring-2 focus:ring-primary/50 transition-all text-sm"
                                 placeholder={activeTab === 'periodismo' ? 'Ej. Marcha Estudiantil Santiago' : 'Ej. Paisajes de la Patagonia'}
@@ -449,11 +561,78 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                     onApplyText={(newText) => setBatchCaption(newText)}
                                 />
                             </div>
-                            <textarea 
+                            <textarea
                                 value={batchCaption} onChange={e => setBatchCaption(e.target.value)} disabled={isUploading} rows={3}
                                 className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-lg py-2 px-3 focus:bg-white focus:ring-2 focus:ring-primary/50 transition-all text-sm"
                                 placeholder="Texto o pie de foto descriptivo que acompañará a las fotos de esta subida..."
                             />
+                        </div>
+
+                                                {/* Módulo de Hashtags Inteligentes con IA */}
+                        <div className="bg-orange-50/60 p-4 rounded-xl border border-orange-200/70 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center text-xs font-bold text-gray-700 uppercase tracking-wide">
+                                    <TagIcon className="w-4 h-4 mr-1.5 text-primary" />
+                                    Hashtags y Etiquetas Temáticas
+                                </label>
+                                {isAnalyzingImage && (
+                                    <span className="flex items-center text-xs font-semibold text-primary animate-pulse">
+                                        <SparklesIcon className="w-4 h-4 mr-1 animate-spin" />
+                                        Escaneando imagen con IA...
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Lista de Hashtags en formato Chips/Pills */}
+                            <div className="flex flex-wrap gap-1.5 min-h-[32px] items-center">
+                                {hashtags.length === 0 && !isAnalyzingImage && (
+                                    <span className="text-xs text-gray-500 italic">
+                                        Selecciona una foto arriba para que la IA sugiera hashtags automáticamente o escribe los tuyos abajo.
+                                    </span>
+                                )}
+
+                                {hashtags.map((tag, idx) => (
+                                    <span 
+                                        key={idx} 
+                                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white text-orange-900 border border-orange-200 shadow-sm"
+                                    >
+                                        {tag}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveTag(tag)}
+                                            className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                            title="Eliminar etiqueta"
+                                        >
+                                            <XMarkIcon className="w-3.5 h-3.5" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+
+                            {/* Input para que el usuario agregue sus propios hashtags */}
+                            <div className="flex gap-2 pt-1">
+                                <input
+                                    type="text"
+                                    value={customTagInput}
+                                    onChange={e => setCustomTagInput(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAddCustomTag();
+                                        }
+                                    }}
+                                    placeholder="Escribe tu propio hashtag (ej: #Valparaíso) y presiona Enter..."
+                                    className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleAddCustomTag}
+                                    className="inline-flex items-center px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-orange-600 transition-all shadow-sm"
+                                >
+                                    <PlusIcon className="w-3.5 h-3.5 mr-1" />
+                                    Añadir
+                                </button>
+                            </div>
                         </div>
 
                         {activeTab === 'galeria' && (
@@ -463,7 +642,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <CurrencyDollarIcon className="h-4 w-4 text-gray-400" />
                                     </div>
-                                    <input 
+                                    <input
                                         type="text" value={batchPrice} onChange={e => setBatchPrice(e.target.value)} disabled={isUploading}
                                         className="w-full pl-10 bg-gray-50 border border-gray-200 text-gray-900 rounded-lg py-2 px-3 focus:bg-white focus:ring-2 focus:ring-primary/50 transition-all text-sm"
                                         placeholder="Ej. $15.000 CLP"
@@ -474,7 +653,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
 
                         <div className="pt-4">
                             {!isUploading ? (
-                                <button 
+                                <button
                                     onClick={handleBatchUpload}
                                     disabled={selectedFiles.length === 0}
                                     className="w-full flex justify-center items-center px-4 py-3 bg-primary text-white font-bold rounded-lg shadow hover:bg-orange-600 transition-all disabled:opacity-50"
@@ -501,30 +680,30 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
                     </div>
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-colors" 
-                        placeholder="Buscar por título o descripción..." 
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                        placeholder="Buscar por título o descripción..."
                     />
                 </div>
                 <div className="relative w-full md:w-64">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <CalendarIcon className="h-5 w-5 text-gray-400" />
                     </div>
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={dateFilter}
                         onChange={(e) => setDateFilter(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 text-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-colors" 
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 text-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
                     />
                 </div>
             </div>
 
             {/* Listado de Fotos */}
             {renderPhotoList()}
-            
+
         </div>
     );
 };

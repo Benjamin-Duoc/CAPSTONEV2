@@ -56,3 +56,24 @@ def assist():
     )
 
     return jsonify(response), 200
+
+@ai_bp.route('/image-hashtags', methods=['POST'])
+def image_hashtags():
+    """
+    Recibe una imagen en Base64 y devuelve hashtags generados con IA.
+    """
+    data = request.get_json() or {}
+    image_base64 = data.get('image') or data.get('image_base64') or ''
+    mime_type = data.get('mime_type', 'image/jpeg')
+
+    if not image_base64:
+        return jsonify({
+            "status": "error",
+            "message": "Se requiere la imagen en formato base64"
+        }), 400
+
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+
+    response = service.generate_image_hashtags(image_base64=image_base64, mime_type=mime_type)
+    return jsonify(response), 200
