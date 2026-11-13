@@ -12,6 +12,7 @@ Plataforma Web Colaborativa para el Periodismo Independiente, Fotoperiodismo y A
   [![Gemini](https://img.shields.io/badge/AI-Google%20Gemini%20API-8e7cc3)](https://aistudio.google.com/)
   [![Flow](https://img.shields.io/badge/Payments-Flow%20Chile-00a884)](https://www.flow.cl/)
   [![Database](https://img.shields.io/badge/Database-SQLite%20%2F%20SQLAlchemy%20(3FN)-lightgrey)](#)
+  [![Docker](https://img.shields.io/badge/Docker-Docker%20Compose-2496ed)](DOCKER.md)
 
 </div>
 
@@ -62,7 +63,23 @@ cd CAPSTONEV2
 
 ---
 
-### 3. Configuración y Ejecución del Backend (Flask)
+### ⚡ Opción A: Ejecución con Docker (Recomendado para Cualquier PC)
+
+Si tienes **Docker Desktop** instalado, puedes levantar todo el proyecto con un solo comando sin instalar dependencias manualmente:
+
+```bash
+docker compose up --build
+```
+
+* **Frontend:** [http://localhost:3000](http://localhost:3000)
+* **Backend:** [http://localhost:5000](http://localhost:5000)
+* 📖 Consulta la [Guía Completa de Docker (DOCKER.md)](DOCKER.md) para más detalles.
+
+---
+
+### 💻 Opción B: Instalación Tradicional Manual (Sin Docker)
+
+#### Configuración y Ejecución del Backend (Flask)
 
 1. **Navega a la carpeta del backend:**
    ```bash

@@ -1,0 +1,65 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cipress-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+      - HOST=0.0.0.0
+      - PORT=5000
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - FRONTEND_URL=http://localhost:3000
+      - BACKEND_URL=http://localhost:5000
+      - MEDIA_FOLDER=media
+      - UPLOAD_FOLDER=media/uploads
+      - SECRET_KEY=dev-key-cipress
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      # Sincronización de código en vivo (Hot-Reload)
+      - ./backend:/app
+      # Evita sobreescribir dependencias con el entorno virtual del host
+      - /app/.venv
+      # Volúmenes persistentes para base de datos y archivos subidos
+      - backend_db:/app/instance
+      - backend_media:/app/media
+    networks:
+      - cipress-network
+
+  frontend:
+    build:
+      context: ./project
+      dockerfile: Dockerfile
+    container_name: cipress-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Proxy interno para comunicarse con el contenedor backend
+      - VITE_API_URL=http://backend:5000
+      - VITE_MEDIA_URL=http://backend:5000
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      # Sincronización de código en vivo (Hot-Reload)
+      - ./project:/app
+      # Preserva el node_modules generado dentro de Linux en el contenedor
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - cipress-network
+
+volumes:
+  backend_db:
+    name: cipress_backend_db
+  backend_media:
+    name: cipress_backend_media
+
+networks:
+  cipress-network:
+    name: cipress_network
+    driver: bridge

@@ -19,6 +19,7 @@ instance/
 # Environment Variables (Private configs)
 .env
 .env.*
+!.env.example
 .env.local
 .env.development
 .env.production
