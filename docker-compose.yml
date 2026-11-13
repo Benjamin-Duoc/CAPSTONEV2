@@ -40,8 +40,8 @@ services:
       - "3000:3000"
     environment:
       # Proxy interno para comunicarse con el contenedor backend
-      - VITE_API_URL=http://backend:5000
-      - VITE_MEDIA_URL=http://backend:5000
+      - VITE_API_URL=http://localhost:5000
+      - VITE_MEDIA_URL=http://localhost:5000
       - CHOKIDAR_USEPOLLING=true
     volumes:
       # Sincronización de código en vivo (Hot-Reload)

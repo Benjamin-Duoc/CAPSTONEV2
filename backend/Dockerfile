@@ -1,12 +1,11 @@
-FROM python:3.12-slim
+FROM python:3.12-alpine
 
 WORKDIR /app
 
 # Dependencias mínimas del sistema
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    build-base \
+    curl
 
 # Copiar requirements primero para aprovechar la caché de Docker
 COPY requirements.txt .
