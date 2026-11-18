@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Entrepreneurship } from '../../types';
 import EntrepreneurForm from '../admin/EntrepreneurForm';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 import { 
     BuildingOfficeIcon, 
     PlusIcon, 
@@ -24,6 +25,32 @@ const MisPymesView: React.FC<MisPymesViewProps> = ({ currentUser }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingPyme, setEditingPyme] = useState<Entrepreneurship | null>(null);
+
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        cancelText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     const loadPymes = async () => {
         setIsLoading(true);
@@ -62,34 +89,48 @@ const MisPymesView: React.FC<MisPymesViewProps> = ({ currentUser }) => {
             });
 
             if (res.ok) {
-                alert(data.id ? "Emprendimiento actualizado con éxito." : "Emprendimiento creado con éxito.");
+                showAlert(
+                    "Emprendimiento Guardado",
+                    data.id ? "Emprendimiento actualizado con éxito." : "Emprendimiento creado con éxito.",
+                    "success"
+                );
                 setIsFormOpen(false);
                 setEditingPyme(null);
                 loadPymes();
             } else {
                 const err = await res.json();
-                alert("Error al guardar: " + (err.error || "Ocurrió un problema"));
+                showAlert("Error al Guardar", "Error al guardar: " + (err.error || "Ocurrió un problema"), "warning");
             }
         } catch (error) {
-            alert("Error de conexión al guardar.");
+            showAlert("Error de Conexión", "Error de conexión al guardar los datos del emprendimiento.", "danger");
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm("¿Estás seguro de que deseas eliminar este emprendimiento? Esta acción no se puede deshacer.")) return;
-        
-        try {
-            const res = await fetch(`${API_BASE}/entrepreneurships/${id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                loadPymes();
-            } else {
-                alert("No se pudo eliminar el emprendimiento.");
+    const handleDelete = (id: number) => {
+        setModalConfig({
+            isOpen: true,
+            type: 'danger',
+            title: '¿Eliminar Emprendimiento?',
+            message: '¿Estás seguro de que deseas eliminar este emprendimiento? Esta acción no se puede deshacer.',
+            confirmText: 'Eliminar',
+            cancelText: 'Cancelar',
+            onConfirm: async () => {
+                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const res = await fetch(`${API_BASE}/entrepreneurships/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        showAlert('Emprendimiento Eliminado', 'El emprendimiento ha sido eliminado con éxito.', 'success');
+                        loadPymes();
+                    } else {
+                        showAlert('Error al Eliminar', 'No se pudo eliminar el emprendimiento.', 'warning');
+                    }
+                } catch (error) {
+                    showAlert('Error de Conexión', 'Error de conexión al intentar eliminar el emprendimiento.', 'danger');
+                }
             }
-        } catch (error) {
-            alert("Error de conexión al eliminar.");
-        }
+        });
     };
 
     const openEditForm = (pyme: Entrepreneurship) => {
@@ -218,6 +259,17 @@ const MisPymesView: React.FC<MisPymesViewProps> = ({ currentUser }) => {
                     onClose={() => { setIsFormOpen(false); setEditingPyme(null); }}
                 />
             )}
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                cancelText={modalConfig.cancelText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

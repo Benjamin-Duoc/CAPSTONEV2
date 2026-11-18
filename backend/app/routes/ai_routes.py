@@ -77,3 +77,80 @@ def image_hashtags():
 
     response = service.generate_image_hashtags(image_base64=image_base64, mime_type=mime_type)
     return jsonify(response), 200
+
+@ai_bp.route('/audit-profile', methods=['POST'])
+def audit_profile():
+    """
+    Audita un perfil profesional del Banco de Talentos con IA de CiPress.
+    Devuelve score, veredicto, puntos fuertes, mejoras y keywords.
+    """
+    data = request.get_json() or {}
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+    response = service.audit_profile(data)
+    return jsonify(response), 200
+
+@ai_bp.route('/suggest-titles', methods=['POST'])
+def suggest_titles():
+    """
+    Genera sugerencias concisas (<= 8 palabras) de títulos profesionales con IA.
+    """
+    data = request.get_json() or {}
+    skills = data.get('skills', [])
+    current_title = data.get('current_title', '')
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+    response = service.suggest_profile_titles(skills, current_title)
+    return jsonify(response), 200
+
+@ai_bp.route('/matchmaking', methods=['POST'])
+def matchmaking():
+    """
+    Realiza emparejamiento semántico entre un encargo urgente y perfiles de talento.
+    """
+    data = request.get_json() or {}
+    collaboration = data.get('collaboration') or {}
+    candidate_profiles = data.get('candidate_profiles')
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+    response = service.matchmaking(collaboration, candidate_profiles)
+    return jsonify(response), 200
+
+@ai_bp.route('/matchmaking/job-to-talents', methods=['POST'])
+def matchmaking_job_to_talents():
+    """
+    Realiza emparejamiento semántico entre una oferta laboral (Job) y la base de talentos.
+    """
+    data = request.get_json() or {}
+    job = data.get('job') or {}
+    candidate_profiles = data.get('candidate_profiles')
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+    response = service.matchmaking_job_to_talents(job, candidate_profiles)
+    return jsonify(response), 200
+
+@ai_bp.route('/matchmaking/talent-to-jobs', methods=['POST'])
+def matchmaking_talent_to_jobs():
+    """
+    Realiza emparejamiento semántico entre el perfil de un periodista y las ofertas laborales activas.
+    """
+    data = request.get_json() or {}
+    talent_profile = data.get('talent_profile') or {}
+    jobs = data.get('jobs')
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+    response = service.matchmaking_talent_to_jobs(talent_profile, jobs)
+    return jsonify(response), 200
+
+@ai_bp.route('/matchmaking/talent-to-collaborations', methods=['POST'])
+def matchmaking_talent_to_collaborations():
+    """
+    Realiza emparejamiento semántico entre el perfil de un periodista y las colaboraciones urgentes activas.
+    """
+    data = request.get_json() or {}
+    talent_profile = data.get('talent_profile') or {}
+    collaborations = data.get('collaborations')
+    api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
+    service = AIService(api_key)
+    response = service.matchmaking_talent_to_collaborations(talent_profile, collaborations)
+    return jsonify(response), 200

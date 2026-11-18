@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 
 upload_bp = Blueprint('upload', __name__)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'jfif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'jfif', 'webp'}
 
 def allowed_file(filename):
     return '.' in filename and \

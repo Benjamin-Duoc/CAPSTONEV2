@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User } from '../../types';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 
 interface UserFormProps {
     user: User | null;
@@ -14,6 +15,30 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSave, onClose }) => {
     const [role, setRole] = useState(user?.role || 'Colaborador');
     const [region, setRegion] = useState(user?.region || 'Metropolitana');
     const [password, setPassword] = useState('');
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'warning') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,7 +59,7 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSave, onClose }) => {
             onSave({ ...user, ...userData });
         } else {
             if (!password) {
-                alert("La contraseña es obligatoria para nuevos usuarios.");
+                showAlert("Campo Obligatorio", "La contraseña es obligatoria para nuevos usuarios.", "warning");
                 return;
             }
             onSave(userData);
@@ -128,6 +153,16 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSave, onClose }) => {
                     </div>
                 </form>
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

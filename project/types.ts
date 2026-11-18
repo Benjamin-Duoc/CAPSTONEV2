@@ -327,4 +327,89 @@ export interface TalentProfile {
     email?: string;
     experienceYears: number;
     isPremium?: boolean;
+    bio?: string;
+}
+
+export interface TalentAuditResult {
+    profileScore: number;
+    verdict: string;
+    strengths: string[];
+    improvements: string[];
+    keywords: string[];
+    suggestedBio: string;
+    suggestedTitles: string[];
+}
+
+export interface MatchCandidate {
+    talentId: number;
+    name: string;
+    avatarUrl?: string;
+    title: string;
+    region: string;
+    matchPercentage: number;
+    matchReasons: string[];
+    recommendedRole: string;
+    whatsappMessage: string;
+    linkedinUrl?: string;
+    isPremium?: boolean;
+}
+
+export interface MatchmakingResult {
+    status: string;
+    summary: string;
+    matches: MatchCandidate[];
+    source?: string;
+}
+
+export interface JobTalentMatchCandidate {
+    talentId: number;
+    name: string;
+    avatarUrl?: string;
+    title: string;
+    region: string;
+    matchPercentage: number;
+    matchReasons: string[];
+    recommendedRole: string;
+    email?: string;
+    linkedinUrl?: string;
+    isPremium?: boolean;
+    experienceYears?: number;
+    availability?: string;
+}
+
+export interface JobTalentMatchResult {
+    status: string;
+    summary: string;
+    matches: JobTalentMatchCandidate[];
+    source?: string;
+}
+
+export interface TalentJobMatch {
+    jobId: number;
+    matchPercentage: number;
+    compatibilityTier: 'Alta' | 'Media' | 'Básica';
+    matchReasons: string[];
+    highlight?: string;
+}
+
+export interface TalentJobMatchResult {
+    status: string;
+    summary: string;
+    matches: TalentJobMatch[];
+    source?: string;
+}
+
+export interface TalentCollabMatch {
+    collabId: number;
+    matchPercentage: number;
+    compatibilityTier: 'Alta' | 'Media' | 'Básica';
+    matchReasons: string[];
+    highlight?: string;
+}
+
+export interface TalentCollabMatchResult {
+    status: string;
+    summary: string;
+    matches: TalentCollabMatch[];
+    source?: string;
 }

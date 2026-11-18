@@ -38,6 +38,21 @@ def create_app(config_class=None):
     
     Migrate(app, db)
 
+    # Auto-compatibilidad de esquema SQLite para nuevas columnas (Docker y Local)
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            if 'talent_profiles' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('talent_profiles')]
+                if 'bio' not in cols:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE talent_profiles ADD COLUMN bio TEXT"))
+                        conn.commit()
+                    app.logger.info("Migración automática: Columna 'bio' añadida a talent_profiles")
+        except Exception as e:
+            app.logger.warning(f"Aviso de compatibilidad de esquema talent_profiles: {e}")
+
 
     # =========================================================================
     # RUTAS BASE (ESTANDARIZADAS)

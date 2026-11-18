@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Entrepreneurship } from '../../types';
 import { ENV } from '../../src/config/env';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 
 interface EntrepreneurFormProps {
     entrepreneur: Entrepreneurship | null;
@@ -25,6 +26,30 @@ const EntrepreneurForm: React.FC<EntrepreneurFormProps> = ({ entrepreneur, onSav
     const [formData, setFormData] = useState<Omit<Entrepreneurship, 'id'> | Entrepreneurship>(initialEntrepreneurState);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'warning') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     useEffect(() => {
         if (entrepreneur) {
@@ -73,11 +98,11 @@ const EntrepreneurForm: React.FC<EntrepreneurFormProps> = ({ entrepreneur, onSav
                 const fullUrl = data.url;
                 setFormData(prev => ({ ...prev, imageUrl: fullUrl }));
             } else {
-                alert('No se pudo subir la imagen: ' + (data.message || 'Error desconocido'));
+                showAlert('Error al Subir Imagen', 'No se pudo subir la imagen: ' + (data.message || 'Error desconocido'), 'warning');
             }
         } catch (error) {
             console.error('Error uploading image:', error);
-            alert('Error al conectar con el servidor para la subida.');
+            showAlert('Error de Conexión', 'Error al conectar con el servidor para la subida de imagen.', 'danger');
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) {
@@ -245,6 +270,16 @@ const EntrepreneurForm: React.FC<EntrepreneurFormProps> = ({ entrepreneur, onSav
                     </div>
                 </form>
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

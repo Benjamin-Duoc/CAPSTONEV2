@@ -183,6 +183,969 @@ class AIService:
             "source": "cipress_local_fallback"
         }
 
+    def audit_profile(self, profile_data: dict) -> dict:
+        """
+        Audita un perfil profesional del Banco de Talentos usando Gemini o heurística avanzada local.
+        Evalúa completitud, coherencia de habilidades, trayectoria y empleabilidad periodística.
+        """
+        name = profile_data.get('name', 'Colega')
+        title = (profile_data.get('title') or '').strip()
+        skills = profile_data.get('skills') or []
+        experience_years = profile_data.get('experience_years') or profile_data.get('experienceYears') or 0
+        region = profile_data.get('region') or 'Metropolitana de Santiago'
+        availability = profile_data.get('availability') or 'Remoto'
+        linkedin_url = profile_data.get('linkedin_url') or profile_data.get('linkedinUrl') or ''
+        expected_salary = profile_data.get('expected_salary') or profile_data.get('expectedSalary') or ''
+        is_premium = bool(profile_data.get('is_premium') or profile_data.get('isPremium'))
+
+        # 1. Intentar con Gemini si la API key está presente
+        if self.api_key:
+            skills_str = ", ".join([s for s in skills if s]) if isinstance(skills, list) else str(skills)
+            prompt = (
+                "Eres un consultor senior de empleabilidad editorial y reclutamiento especializado en periodismo, "
+                "fotoperiodismo y medios de comunicación para la red CiPress en Chile.\n"
+                "Audita de forma constructiva, rigurosa y profesional el siguiente perfil profesional del Banco de Talentos:\n"
+                f"- Nombre: {name}\n"
+                f"- Título descriptor: {title}\n"
+                f"- Años de experiencia: {experience_years}\n"
+                f"- Habilidades clave: {skills_str}\n"
+                f"- Región geográfica: {region}\n"
+                f"- Modalidad: {availability}\n"
+                f"- Perfil LinkedIn: {'Registrado' if linkedin_url else 'No registrado'}\n"
+                f"- Renta pretendida: {'Registrada' if expected_salary else 'No declarada'}\n"
+                f"- Nivel de membresía: {'Colaborador Premium (prioridad en directorio)' if is_premium else 'Colaborador Gratis'}\n\n"
+                "Genera una auditoría con diagnóstico de empleabilidad. Responde ÚNICAMENTE un objeto JSON estrictamente válido "
+                "con la siguiente estructura exacta, sin texto introductorio, sin explicaciones ni bloques de markdown fuera del json:\n"
+                "{\n"
+                '  "profile_score": <entero entre 40 y 98 según completitud y solidez>,\n'
+                '  "verdict": "<frase concisa de 2 a 4 palabras, ej: \'Perfil Altamente Competitivo\', \'Perfil Sólido en Crecimiento\'>",\n'
+                '  "strengths": ["<punto fuerte concreto 1>", "<punto fuerte concreto 2>", "<punto fuerte concreto 3>"],\n'
+                '  "improvements": ["<recomendación accionable 1>", "<recomendación accionable 2>", "<recomendación accionable 3>"],\n'
+                '  "keywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],\n'
+                '  "suggested_bio": "<Extracto profesional de 2 o 3 oraciones de alto impacto destacando experiencia y valor periodístico>",\n'
+                '  "suggested_titles": ["<Título alternativo 1 (máx 8 palabras)>", "<Título alternativo 2 (máx 8 palabras)>"]\n'
+                "}"
+            )
+
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 700
+                }
+            }
+
+            for model_name in self.MODELS_TO_TRY:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=18)
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                            clean_json = raw_text.strip()
+                            if clean_json.startswith("```json"):
+                                clean_json = clean_json[7:]
+                            if clean_json.startswith("```"):
+                                clean_json = clean_json[3:]
+                            if clean_json.endswith("```"):
+                                clean_json = clean_json[:-3]
+                            clean_json = clean_json.strip()
+
+                            parsed = json.loads(clean_json)
+                            return {
+                                "status": "success",
+                                "source": "gemini",
+                                "model": model_name,
+                                "data": parsed
+                            }
+                except Exception as e:
+                    logger.warning(f"Error auditando perfil con Gemini ({model_name}): {e}")
+
+        # 2. Heurística local de alta fidelidad si no hay API key o hubo error
+        return {
+            "status": "success",
+            "source": "cipress_local_heuristics",
+            "data": self._local_profile_audit(name, title, skills, experience_years, region, availability, linkedin_url, expected_salary, is_premium)
+        }
+
+    def _local_profile_audit(self, name, title, skills, experience_years, region, availability, linkedin_url, expected_salary, is_premium):
+        """Genera un reporte heurístico inteligente para perfiles de periodistas."""
+        clean_skills = [s.strip() for s in skills if s and s.strip()] if isinstance(skills, list) else []
+        title_word_count = len(title.split()) if title else 0
+
+        score = 40
+        if title:
+            score += 15 if title_word_count <= 8 else 5
+        if len(clean_skills) >= 3:
+            score += 20
+        elif len(clean_skills) >= 1:
+            score += 10
+        if int(experience_years or 0) > 0:
+            score += 10
+        if linkedin_url:
+            score += 10
+        if expected_salary:
+            score += 5
+        score = min(score, 96)
+
+        if score >= 80:
+            verdict = "Perfil Altamente Competitivo"
+        elif score >= 60:
+            verdict = "Perfil Sólido en Crecimiento"
+        else:
+            verdict = "Perfil Básico con Buen Potencial"
+
+        strengths = []
+        if len(clean_skills) >= 3:
+            strengths.append(f"Diversidad de especialidades identificadas: {', '.join(clean_skills[:2])}.")
+        if int(experience_years or 0) >= 3:
+            strengths.append(f"Trayectoria consolidada de {experience_years} años que aporta credibilidad editorial.")
+        elif int(experience_years or 0) > 0:
+            strengths.append(f"Experiencia inicial ({experience_years} año) que demuestra dinamismo y adaptabilidad.")
+        if title and title_word_count <= 8:
+            strengths.append(f"Título profesional conciso y directo: \"{title}\".")
+        if not strengths:
+            strengths.append("Información de contacto y disponibilidad geográfica claramente establecida.")
+
+        improvements = []
+        if not linkedin_url:
+            improvements.append("Añadir tu enlace a LinkedIn aumenta significativamente la tasa de contacto de agencias.")
+        if len(clean_skills) < 3:
+            improvements.append("Completa las 3 habilidades principales para facilitar coincidencias con coberturas urgentes.")
+        if title_word_count > 8:
+            improvements.append("Ajusta tu título a un máximo de 8 palabras para una lectura ágil en listados de medios.")
+        if int(experience_years or 0) == 0:
+            improvements.append("Indica tus años de experiencia acumulados para calificar en búsquedas con filtro de seniority.")
+        if not expected_salary and is_premium:
+            improvements.append("Indicar un rango salarial estimado acelera negociaciones laborales con empleadores.")
+        if not improvements:
+            improvements.append("Mantén tus habilidades actualizadas con herramientas emergentes de IA periodística y fact-checking.")
+
+        keywords = list(dict.fromkeys([
+            s for s in clean_skills
+        ] + [
+            "Periodismo", region, "Prensa Digital", "Cobertura Editorial", "Redacción"
+        ]))[:5]
+
+        skill_ref = f"especializado en {clean_skills[0]}" if clean_skills else "con enfoque en periodismo riguroso"
+        if len(clean_skills) > 1:
+            skill_ref += f" y {clean_skills[1]}"
+        exp_ref = f"{experience_years} años de trayectoria" if int(experience_years or 0) > 0 else "trayectoria emergente"
+        suggested_bio = f"Comunicador profesional en {region} con {exp_ref}, {skill_ref}. Comprometido con el rigor informativo, narrativas modernas y la entrega oportuna de contenidos para medios y agencias."
+
+        suggested_titles = []
+        if clean_skills:
+            suggested_titles.append(f"Periodista Especialista en {clean_skills[0]}"[:50])
+            if len(clean_skills) > 1:
+                suggested_titles.append(f"Corresponsal & Editor en {clean_skills[1]}"[:50])
+        else:
+            suggested_titles.append("Periodista Multimedia & Redactor de Prensa")
+            suggested_titles.append("Comunicador Estratégico y de Terreno")
+
+        return {
+            "profile_score": score,
+            "verdict": verdict,
+            "strengths": strengths[:3],
+            "improvements": improvements[:3],
+            "keywords": keywords,
+            "suggested_bio": suggested_bio,
+            "suggested_titles": suggested_titles
+        }
+
+    def suggest_profile_titles(self, skills: list, current_title: str = "") -> dict:
+        """
+        Genera sugerencias de títulos descriptivos profesionales concisos (<= 8 palabras).
+        """
+        clean_skills = [s.strip() for s in skills if s and s.strip()] if isinstance(skills, list) else []
+        skills_str = ", ".join(clean_skills) if clean_skills else "Periodismo general, Redacción"
+
+        if self.api_key:
+            prompt = (
+                f"Genera exactamente 3 títulos profesionales periodísticos atractivos y concisos (máximo 8 palabras cada uno) "
+                f"para un comunicador en Chile cuyas habilidades principales son: {skills_str}.\n"
+                f"Título actual: '{current_title or 'Sin definir'}'.\n"
+                "Devuelve ÚNICAMENTE los 3 títulos separados por saltos de línea, sin números ni viñetas ni comentarios adicionales."
+            )
+            result, used_model, _ = self._call_gemini(prompt)
+            if result:
+                lines = [l.strip().lstrip('1234567890.-*• ') for l in result.split('\n') if l.strip()]
+                valid_titles = [" ".join(l.split()[:8]) for l in lines if l]
+                if valid_titles:
+                    return {
+                        "status": "success",
+                        "titles": valid_titles[:3],
+                        "source": "gemini"
+                    }
+
+        base = clean_skills[0] if clean_skills else "Investigación"
+        sec = clean_skills[1] if len(clean_skills) > 1 else "Medios Digitales"
+        return {
+            "status": "success",
+            "titles": [
+                f"Periodista Especializado en {base}"[:45],
+                f"Redactor Senior de {base} y {sec}"[:45],
+                "Corresponsal Multimedia y Analista Editorial"
+            ],
+            "source": "cipress_local_heuristics"
+        }
+
+    def matchmaking(self, collaboration: dict, candidate_profiles: list = None) -> dict:
+        """
+        Realiza el emparejamiento semántico entre un pedido urgente de colaboración
+        y los perfiles profesionales registrados en el Banco de Talentos.
+        """
+        title = (collaboration.get('title') or '').strip()
+        deadline = collaboration.get('deadline') or 'Inmediato'
+        budget = collaboration.get('budget') or 'A convenir'
+
+        # Si no se entregan perfiles desde el frontend, consultarlos desde la base de datos
+        if not candidate_profiles:
+            try:
+                from app.models.all_models import TalentProfile
+                from app.schemas.all_schemas import TalentProfileSchema
+                schema = TalentProfileSchema(many=True)
+                raw_profiles = TalentProfile.query.all()
+                candidate_profiles = schema.dump(raw_profiles)
+            except Exception as e:
+                logger.warning(f"Error cargando perfiles para matchmaking: {e}")
+                candidate_profiles = []
+
+        if not candidate_profiles:
+            return {
+                "status": "success",
+                "summary": "No hay perfiles registrados actualmente en el Banco de Talentos para realizar el emparejamiento.",
+                "matches": [],
+                "source": "local"
+            }
+
+        # 1. Intentar emparejamiento inteligente con Gemini
+        if self.api_key:
+            candidates_summary = []
+            for p in candidate_profiles[:15]:
+                clean_skills = [s for s in (p.get('skills') or []) if s]
+                candidates_summary.append({
+                    "id": p.get('id'),
+                    "name": p.get('name'),
+                    "title": p.get('title'),
+                    "skills": clean_skills,
+                    "region": p.get('region'),
+                    "availability": p.get('availability'),
+                    "experience_years": p.get('experience_years') or 0,
+                    "is_premium": bool(p.get('is_premium') or p.get('isPremium'))
+                })
+
+            prompt = (
+                "Eres el motor de emparejamiento semántico y selección de talentos (Matchmaking Editorial) "
+                "de CiPress (Círculo de Periodistas de Chile).\n"
+                "Tu objetivo es encontrar a los mejores profesionales del Banco de Talentos para cubrir este encargo urgente:\n\n"
+                f"REQUERIMIENTO DE COBERTURA URGENTE:\n"
+                f"- Título/Tema: {title}\n"
+                f"- Plazo: {deadline}\n"
+                f"- Presupuesto: {budget}\n\n"
+                f"PERFILES DE TALENTO DISPONIBLES:\n{json.dumps(candidates_summary, ensure_ascii=False)}\n\n"
+                "CRITERIOS DE EVALUACIÓN:\n"
+                "1. Afinidad temática y técnica entre la cobertura y las habilidades/título del talento.\n"
+                "2. Compatibilidad geográfica regional.\n"
+                "3. Seniority y años de experiencia.\n\n"
+                "Devuelve ÚNICAMENTE un objeto JSON estrictamente válido con esta estructura exacta:\n"
+                "{\n"
+                '  "summary": "<Resumen ejecutivo de 1 o 2 oraciones justificando la selección de candidatos>",\n'
+                '  "matches": [\n'
+                "    {\n"
+                '      "talent_id": <id numérico>,\n'
+                '      "name": "<nombre del talento>",\n'
+                '      "title": "<título del talento>",\n'
+                '      "region": "<región>",\n'
+                '      "match_percentage": <entero entre 65 y 98>,\n'
+                '      "recommended_role": "<Rol periodístico asignable, ej: Reportero Gráfico en Terreno, Redactor Especializado>",\n'
+                '      "match_reasons": ["<razón 1>", "<razón 2>"],\n'
+                '      "whatsapp_message": "Hola <Nombre>, te contacto desde CiPress respecto a la colaboración urgente \\"<Título>\\". Tu perfil fue seleccionado con alta afinidad para esta cobertura. ¿Tienes disponibilidad?"\n'
+                "    }\n"
+                "  ]\n"
+                "}\n"
+                "Ordena la lista 'matches' de mayor a menor porcentaje de afinidad. Incluye máximo 4 candidatos."
+            )
+
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.2,
+                    "maxOutputTokens": 800
+                }
+            }
+
+            for model_name in self.MODELS_TO_TRY:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=18)
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                            clean_json = raw_text.strip()
+                            if clean_json.startswith("```json"):
+                                clean_json = clean_json[7:]
+                            if clean_json.startswith("```"):
+                                clean_json = clean_json[3:]
+                            if clean_json.endswith("```"):
+                                clean_json = clean_json[:-3]
+                            clean_json = clean_json.strip()
+
+                            parsed = json.loads(clean_json)
+                            enriched_matches = self._enrich_matches(parsed.get('matches', []), candidate_profiles)
+                            return {
+                                "status": "success",
+                                "source": "gemini",
+                                "model": model_name,
+                                "summary": parsed.get('summary', 'Candidatos seleccionados con alta afinidad técnica y territorial.'),
+                                "matches": enriched_matches
+                            }
+                except Exception as e:
+                    logger.warning(f"Error en matchmaking con Gemini ({model_name}): {e}")
+
+        # 2. Respaldo heurístico local
+        local_res = self._local_matchmaking(title, deadline, budget, candidate_profiles)
+        return {
+            "status": "success",
+            "source": "cipress_local_heuristics",
+            **local_res
+        }
+
+    def _enrich_matches(self, matches: list, original_profiles: list) -> list:
+        """Enriquece los resultados de Gemini con fotos de avatar y datos de los perfiles."""
+        profiles_by_id = {p.get('id'): p for p in original_profiles if p.get('id')}
+        enriched = []
+        for m in matches:
+            orig = profiles_by_id.get(m.get('talent_id'), {})
+            enriched.append({
+                **m,
+                "avatar_url": orig.get('avatar_url') or f"https://i.pravatar.cc/150?u={m.get('talent_id', 1)}",
+                "linkedin_url": orig.get('linkedin_url', ''),
+                "is_premium": bool(orig.get('is_premium') or orig.get('isPremium'))
+            })
+        return enriched
+
+    def _local_matchmaking(self, title: str, deadline: str, budget: str, candidate_profiles: list) -> dict:
+        """Motor heurístico de coincidencia geográfica y temática para periodistas."""
+        title_lower = title.lower()
+        scored_matches = []
+
+        keywords_map = {
+            "foto": "Fotoperiodismo",
+            "imagen": "Fotoperiodismo",
+            "grafic": "Reportería Gráfica",
+            "marcha": "Cobertura en Terreno",
+            "evento": "Cobertura en Vivo",
+            "investiga": "Periodismo de Investigación",
+            "dato": "Periodismo de Datos",
+            "polit": "Crónica Política",
+            "tribunal": "Crónica Judicial",
+            "redacc": "Redacción Editorial",
+            "cultur": "Periodismo Cultural"
+        }
+
+        matched_specialties = [spec for kw, spec in keywords_map.items() if kw in title_lower]
+        if not matched_specialties:
+            matched_specialties = ["Prensa General", "Cobertura Rápida"]
+
+        for p in candidate_profiles:
+            score = 65
+            reasons = []
+            clean_skills = [s for s in (p.get('skills') or []) if s]
+            p_title = (p.get('title') or '').lower()
+            p_region = p.get('region') or 'Metropolitana'
+
+            # 1. Coincidencia geográfica
+            if p_region.lower() in title_lower or "metropolitana" in p_region.lower():
+                score += 15
+                reasons.append(f"Ubicación estratégica en {p_region} para rápida respuesta.")
+            else:
+                reasons.append(f"Disponibilidad operativa con base en {p_region}.")
+
+            # 2. Coincidencia de habilidades
+            skill_matched = False
+            for s in clean_skills:
+                for kw in keywords_map:
+                    if kw in s.lower() and kw in title_lower:
+                        score += 15
+                        reasons.append(f"Especialidad verificada en {s}.")
+                        skill_matched = True
+                        break
+                if skill_matched:
+                    break
+
+            if not skill_matched and clean_skills:
+                reasons.append(f"Dominio de competencias complementarias: {clean_skills[0]}.")
+
+            # 3. Experiencia
+            exp = int(p.get('experience_years') or 0)
+            if exp >= 3:
+                score += 8
+                reasons.append(f"{exp} años de experiencia profesional acreditada.")
+
+            score = min(score, 97)
+            rec_role = matched_specialties[0] if matched_specialties else "Corresponsal Editorial"
+            name = p.get('name') or 'Colega'
+
+            wa_msg = (
+                f"Hola {name}, te contacto desde CiPress respecto al requerimiento urgente '{title}' "
+                f"(Plazo: {deadline}, Presupuesto: {budget}). Tu perfil en el Banco de Talentos fue seleccionado "
+                f"por afinidad técnica. ¿Tienes disponibilidad para sumarte?"
+            )
+
+            scored_matches.append({
+                "talent_id": p.get('id'),
+                "name": name,
+                "title": p.get('title') or 'Periodista CiPress',
+                "region": p_region,
+                "avatar_url": p.get('avatar_url') or f"https://i.pravatar.cc/150?u={p.get('id', 1)}",
+                "match_percentage": score,
+                "recommended_role": rec_role,
+                "match_reasons": reasons[:2],
+                "whatsapp_message": wa_msg,
+                "linkedin_url": p.get('linkedin_url', ''),
+                "is_premium": bool(p.get('is_premium') or p.get('isPremium'))
+            })
+
+        # Ordenar descendente por afinidad
+        scored_matches.sort(key=lambda x: x['match_percentage'], reverse=True)
+        top_matches = scored_matches[:4]
+
+        return {
+            "summary": f"Se identificaron {len(top_matches)} profesionales con afinidad temática hacia '{title}'.",
+            "matches": top_matches
+        }
+
+    def matchmaking_job_to_talents(self, job: dict, candidate_profiles: list = None) -> dict:
+        """
+        Realiza el emparejamiento semántico entre una Oferta Laboral (Job)
+        y los perfiles profesionales registrados en el Banco de Talentos.
+        """
+        job_title = (job.get('title') or '').strip()
+        company = (job.get('company') or '').strip()
+        area = job.get('area') or 'Prensa'
+        location = job.get('location') or 'Chile'
+        job_type = job.get('type') or 'Completo'
+        description = job.get('description') or ''
+        apply_email = job.get('apply_email') or job.get('applyEmail') or 'contacto@cipress.cl'
+
+        if not candidate_profiles:
+            try:
+                from app.models.all_models import TalentProfile
+                from app.schemas.all_schemas import TalentProfileSchema
+                schema = TalentProfileSchema(many=True)
+                raw_profiles = TalentProfile.query.all()
+                candidate_profiles = schema.dump(raw_profiles)
+            except Exception as e:
+                logger.warning(f"Error cargando perfiles para job-to-talents: {e}")
+                candidate_profiles = []
+
+        if not candidate_profiles:
+            return {
+                "status": "success",
+                "summary": "No hay perfiles registrados en el Banco de Talentos para realizar el emparejamiento.",
+                "matches": [],
+                "source": "local"
+            }
+
+        # 1. Intentar con Gemini
+        if self.api_key:
+            candidates_summary = []
+            for p in candidate_profiles[:15]:
+                clean_skills = [s for s in (p.get('skills') or []) if s]
+                candidates_summary.append({
+                    "id": p.get('id'),
+                    "name": p.get('name'),
+                    "title": p.get('title'),
+                    "skills": clean_skills,
+                    "region": p.get('region'),
+                    "availability": p.get('availability'),
+                    "experience_years": p.get('experience_years') or 0,
+                    "is_premium": bool(p.get('is_premium') or p.get('isPremium')),
+                    "email": p.get('email') or f"talento_{p.get('id')}@cipress.cl"
+                })
+
+            prompt = (
+                "Eres el motor de selección de talentos y Matchmaking Editorial de CiPress (Círculo de Periodistas de Chile).\n"
+                "Tu misión es encontrar a los mejores candidatos del Banco de Talentos para cubrir la siguiente vacante laboral:\n\n"
+                f"OFERTA LABORAL:\n"
+                f"- Cargo: {job_title}\n"
+                f"- Medio / Empresa: {company}\n"
+                f"- Área: {area}\n"
+                f"- Ubicación: {location}\n"
+                f"- Jornada / Tipo: {job_type}\n"
+                f"- Requisitos y Descripción: {description[:500]}\n\n"
+                f"PERFILES DE TALENTO REGISTRADOS:\n{json.dumps(candidates_summary, ensure_ascii=False)}\n\n"
+                "CRITERIOS DE SELECCIÓN:\n"
+                "1. Afinidad directa entre las habilidades del periodista y el área periodística (Prensa, Digital, TV, Radio).\n"
+                "2. Experiencia previa y años de ejercicio profesional adecuados al cargo.\n"
+                "3. Compatibilidad geográfica y disponibilidad horaria/remota.\n\n"
+                "Devuelve ÚNICAMENTE un objeto JSON estrictamente válido con este formato:\n"
+                "{\n"
+                '  "summary": "<Resumen de 1-2 oraciones explicando por qué estos candidatos son ideales para el cargo>",\n'
+                '  "matches": [\n'
+                "    {\n"
+                '      "talent_id": <id numérico>,\n'
+                '      "name": "<nombre del talento>",\n'
+                '      "title": "<título>",\n'
+                '      "region": "<región>",\n'
+                '      "match_percentage": <entero entre 68 y 98>,\n'
+                '      "recommended_role": "<Rol o especialidad recomendada, ej: Editor Digital, Redactor Senior, Reportero>",\n'
+                '      "match_reasons": ["<razón 1>", "<razón 2>"]\n'
+                "    }\n"
+                "  ]\n"
+                "}\n"
+                "Ordena la lista 'matches' de mayor a menor porcentaje de afinidad (máximo 4 candidatos)."
+            )
+
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
+            }
+
+            for model_name in self.MODELS_TO_TRY:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=18)
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                            clean_json = raw_text.strip()
+                            if clean_json.startswith("```json"):
+                                clean_json = clean_json[7:]
+                            if clean_json.startswith("```"):
+                                clean_json = clean_json[3:]
+                            if clean_json.endswith("```"):
+                                clean_json = clean_json[:-3]
+                            clean_json = clean_json.strip()
+
+                            parsed = json.loads(clean_json)
+                            enriched = self._enrich_matches(parsed.get('matches', []), candidate_profiles)
+                            for item in enriched:
+                                orig = next((p for p in candidate_profiles if p.get('id') == item.get('talent_id')), {})
+                                item['email'] = orig.get('email') or apply_email
+                                item['experience_years'] = orig.get('experience_years') or 0
+                                item['availability'] = orig.get('availability') or 'Disponible'
+
+                            return {
+                                "status": "success",
+                                "source": "gemini",
+                                "model": model_name,
+                                "summary": parsed.get('summary', f"Candidatos seleccionados con alta afinidad para el cargo de {job_title} en {company}."),
+                                "matches": enriched
+                            }
+                except Exception as e:
+                    logger.warning(f"Error en matchmaking_job_to_talents con Gemini ({model_name}): {e}")
+
+        # 2. Respaldo heurístico local
+        local_res = self._local_job_to_talents(job, candidate_profiles)
+        return {
+            "status": "success",
+            "source": "cipress_local_heuristics",
+            **local_res
+        }
+
+    def _local_job_to_talents(self, job: dict, candidate_profiles: list) -> dict:
+        job_title = (job.get('title') or '').lower()
+        area = (job.get('area') or 'Prensa').lower()
+        location = (job.get('location') or '').lower()
+        apply_email = job.get('apply_email') or job.get('applyEmail') or 'contacto@cipress.cl'
+
+        scored = []
+        for p in candidate_profiles:
+            score = 65
+            reasons = []
+            clean_skills = [s.lower() for s in (p.get('skills') or []) if s]
+            p_title = (p.get('title') or '').lower()
+            p_region = (p.get('region') or 'Metropolitana').lower()
+            p_avail = (p.get('availability') or '').lower()
+            exp = int(p.get('experience_years') or 0)
+
+            # 1. Coincidencia de Área
+            if area in p_title or any(area in s for s in clean_skills):
+                score += 15
+                reasons.append(f"Experiencia y competencias alineadas con el área {job.get('area')}.")
+            elif "digital" in area and ("web" in p_title or "redes" in p_title or any("digital" in s for s in clean_skills)):
+                score += 15
+                reasons.append("Dominio comprobado en ecosistemas y plataformas digitales.")
+            else:
+                reasons.append(f"Perfil adaptable al área de {job.get('area')}.")
+
+            # 2. Coincidencia de Ubicación o Remoto
+            if "remoto" in location or "remoto" in p_avail:
+                score += 10
+                reasons.append("Compatibilidad para modalidad remota o híbrida.")
+            elif location in p_region or "metropolitana" in p_region:
+                score += 10
+                reasons.append(f"Residencia en {p.get('region')}, compatible con la ubicación requerida.")
+
+            # 3. Experiencia acreditada
+            if exp >= 3:
+                score += 8
+                reasons.append(f"{exp} años de trayectoria profesional acreditada.")
+
+            score = min(score, 97)
+
+            scored.append({
+                "talent_id": p.get('id'),
+                "name": p.get('name') or 'Colega',
+                "title": p.get('title') or 'Periodista CiPress',
+                "region": p.get('region') or 'Metropolitana',
+                "avatar_url": p.get('avatar_url') or f"https://i.pravatar.cc/150?u={p.get('id', 1)}",
+                "match_percentage": score,
+                "recommended_role": f"Candidato para {job.get('title')}",
+                "match_reasons": reasons[:2],
+                "email": p.get('email') or apply_email,
+                "linkedin_url": p.get('linkedin_url', ''),
+                "experience_years": exp,
+                "availability": p.get('availability') or 'Disponible',
+                "is_premium": bool(p.get('is_premium') or p.get('isPremium'))
+            })
+
+        scored.sort(key=lambda x: x['match_percentage'], reverse=True)
+        top = scored[:4]
+        return {
+            "summary": f"Se identificaron {len(top)} profesionales destacados del Banco de Talentos con afinidad para '{job.get('title')}'.",
+            "matches": top
+        }
+
+    def matchmaking_talent_to_jobs(self, talent_profile: dict, jobs: list = None) -> dict:
+        """
+        Realiza el emparejamiento semántico entre el perfil de un Periodista (TalentProfile)
+        y la lista de ofertas laborales activas en CiPress.
+        """
+        p_name = talent_profile.get('name') or 'Periodista'
+        p_title = talent_profile.get('title') or ''
+        clean_skills = [s for s in (talent_profile.get('skills') or []) if s]
+        p_region = talent_profile.get('region') or 'Metropolitana'
+        p_exp = int(talent_profile.get('experience_years') or 0)
+        p_avail = talent_profile.get('availability') or 'Completa'
+        p_bio = talent_profile.get('bio') or ''
+
+        if not jobs:
+            try:
+                from app.models.all_models import Job
+                from app.schemas.all_schemas import JobSchema
+                schema = JobSchema(many=True)
+                raw_jobs = Job.query.all()
+                jobs = schema.dump(raw_jobs)
+            except Exception as e:
+                logger.warning(f"Error cargando jobs para talent-to-jobs: {e}")
+                jobs = []
+
+        if not jobs:
+            return {
+                "status": "success",
+                "summary": "No hay ofertas laborales activas en este momento.",
+                "matches": [],
+                "source": "local"
+            }
+
+        # 1. Intentar con Gemini
+        if self.api_key:
+            jobs_summary = []
+            for j in jobs[:15]:
+                jobs_summary.append({
+                    "id": j.get('id'),
+                    "title": j.get('title'),
+                    "company": j.get('company'),
+                    "area": j.get('area'),
+                    "location": j.get('location'),
+                    "type": j.get('type'),
+                    "description": (j.get('description') or '')[:250]
+                })
+
+            prompt = (
+                "Eres el orientador laboral y motor de Matchmaking Editorial de CiPress (Círculo de Periodistas de Chile).\n"
+                "Tu misión es evaluar el perfil del siguiente periodista y recomendarle las mejores ofertas laborales acordes a sus fortalezas:\n\n"
+                f"PERFIL DEL PERIODISTA:\n"
+                f"- Nombre: {p_name}\n"
+                f"- Título descriptor: {p_title}\n"
+                f"- Habilidades: {', '.join(clean_skills)}\n"
+                f"- Años de experiencia: {p_exp}\n"
+                f"- Región: {p_region}\n"
+                f"- Disponibilidad: {p_avail}\n"
+                f"- Extracto/Bio: {p_bio[:300]}\n\n"
+                f"VACANTES LABORALES DISPONIBLES:\n{json.dumps(jobs_summary, ensure_ascii=False)}\n\n"
+                "CRITERIOS DE RECOMENDACIÓN:\n"
+                "1. Nivel de coincidencia entre las habilidades/experiencia del periodista y las responsabilidades del cargo.\n"
+                "2. Compatibilidad del área periodística (Prensa, Digital, TV, Radio).\n"
+                "3. Viabilidad de modalidad (remoto/híbrido/presencial regional).\n\n"
+                "Devuelve ÚNICAMENTE un objeto JSON estrictamente válido con esta estructura:\n"
+                "{\n"
+                '  "summary": "<Resumen personalizado de 1-2 oraciones explicando por qué estas vacantes son las más recomendadas para el periodista>",\n'
+                '  "matches": [\n'
+                "    {\n"
+                '      "job_id": <id numérico>,\n'
+                '      "match_percentage": <entero entre 65 y 98>,\n'
+                '      "compatibility_tier": "<Alta | Media | Básica>",\n'
+                '      "match_reasons": ["<razón 1>", "<razón 2>"],\n'
+                '      "highlight": "<Frase motivadora corta destacando el principal punto fuerte para esta vacante>"\n'
+                "    }\n"
+                "  ]\n"
+                "}\n"
+                "Ordena 'matches' de mayor a menor porcentaje de afinidad."
+            )
+
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
+            }
+
+            for model_name in self.MODELS_TO_TRY:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=18)
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                            clean_json = raw_text.strip()
+                            if clean_json.startswith("```json"):
+                                clean_json = clean_json[7:]
+                            if clean_json.startswith("```"):
+                                clean_json = clean_json[3:]
+                            if clean_json.endswith("```"):
+                                clean_json = clean_json[:-3]
+                            clean_json = clean_json.strip()
+
+                            parsed = json.loads(clean_json)
+                            return {
+                                "status": "success",
+                                "source": "gemini",
+                                "model": model_name,
+                                "summary": parsed.get('summary', 'Ofertas seleccionadas según tu perfil periodístico.'),
+                                "matches": parsed.get('matches', [])
+                            }
+                except Exception as e:
+                    logger.warning(f"Error en matchmaking_talent_to_jobs con Gemini ({model_name}): {e}")
+
+        # 2. Respaldo heurístico local
+        local_res = self._local_talent_to_jobs(talent_profile, jobs)
+        return {
+            "status": "success",
+            "source": "cipress_local_heuristics",
+            **local_res
+        }
+
+    def _local_talent_to_jobs(self, talent_profile: dict, jobs: list) -> dict:
+        p_title = (talent_profile.get('title') or '').lower()
+        skills = [s.lower() for s in (talent_profile.get('skills') or []) if s]
+        p_region = (talent_profile.get('region') or 'Metropolitana').lower()
+        exp = int(talent_profile.get('experience_years') or 0)
+
+        scored = []
+        for j in jobs:
+            score = 65
+            reasons = []
+            j_title = (j.get('title') or '').lower()
+            area = (j.get('area') or 'Prensa').lower()
+            location = (j.get('location') or '').lower()
+
+            if area in p_title or any(area in s for s in skills):
+                score += 15
+                reasons.append(f"Tus competencias calzan con el área de {j.get('area')}.")
+            elif "digital" in area and any(k in p_title or any(k in s for s in skills) for k in ["digital", "web", "redes"]):
+                score += 15
+                reasons.append("Tu perfil digital se alinea con el formato de esta publicación.")
+
+            if "remoto" in location:
+                score += 10
+                reasons.append("Modalidad de trabajo remota compatible.")
+            elif location in p_region or "metropolitana" in p_region:
+                score += 10
+                reasons.append(f"Ubicación en {j.get('location')} compatible con tu zona de residencia.")
+
+            if exp >= 3:
+                score += 8
+                reasons.append(f"Cumples con el nivel de experiencia requerido ({exp} años).")
+
+            score = min(score, 97)
+            tier = "Alta" if score >= 80 else ("Media" if score >= 70 else "Básica")
+
+            scored.append({
+                "job_id": j.get('id'),
+                "match_percentage": score,
+                "compatibility_tier": tier,
+                "match_reasons": reasons[:2],
+                "highlight": f"Tu perfil en CiPress tiene una afinidad {tier.lower()} con esta vacante."
+            })
+
+        scored.sort(key=lambda x: x['match_percentage'], reverse=True)
+        return {
+            "summary": f"Hemos evaluado {len(jobs)} vacantes laborales y encontramos {len(scored)} con afinidad para tu perfil.",
+            "matches": scored
+        }
+
+    def matchmaking_talent_to_collaborations(self, talent_profile: dict, collaborations: list = None) -> dict:
+        """
+        Realiza el emparejamiento semántico entre el perfil de un Periodista (TalentProfile)
+        y la lista de colaboraciones urgentes activas en CiPress.
+        """
+        p_name = talent_profile.get('name') or 'Periodista'
+        p_title = talent_profile.get('title') or ''
+        clean_skills = [s for s in (talent_profile.get('skills') or []) if s]
+        p_region = talent_profile.get('region') or 'Metropolitana'
+        p_exp = int(talent_profile.get('experience_years') or 0)
+        p_avail = talent_profile.get('availability') or 'Completa'
+        p_bio = talent_profile.get('bio') or ''
+
+        if not collaborations:
+            try:
+                from app.models.all_models import ShortCollaboration
+                from app.schemas.all_schemas import ShortCollaborationSchema
+                schema = ShortCollaborationSchema(many=True)
+                raw_collabs = ShortCollaboration.query.all()
+                collaborations = schema.dump(raw_collabs)
+            except Exception as e:
+                logger.warning(f"Error cargando colaboraciones para talent-to-collabs: {e}")
+                collaborations = []
+
+        if not collaborations:
+            return {
+                "status": "success",
+                "summary": "No hay colaboraciones urgentes activas en este momento.",
+                "matches": [],
+                "source": "local"
+            }
+
+        # 1. Intentar con Gemini
+        if self.api_key:
+            collabs_summary = []
+            for c in collaborations[:15]:
+                collabs_summary.append({
+                    "id": c.get('id'),
+                    "title": c.get('title'),
+                    "deadline": c.get('deadline'),
+                    "budget": c.get('budget'),
+                    "author": c.get('author')
+                })
+
+            prompt = (
+                "Eres el orientador laboral y motor de Matchmaking Editorial de CiPress (Círculo de Periodistas de Chile).\n"
+                "Tu misión es evaluar el perfil del siguiente periodista y recomendarle las colaboraciones urgentes y pautas de terreno que mejor encajan con sus habilidades:\n\n"
+                f"PERFIL DEL PERIODISTA:\n"
+                f"- Nombre: {p_name}\n"
+                f"- Título descriptor: {p_title}\n"
+                f"- Habilidades: {', '.join(clean_skills)}\n"
+                f"- Años de experiencia: {p_exp}\n"
+                f"- Región: {p_region}\n"
+                f"- Disponibilidad: {p_avail}\n"
+                f"- Bio: {p_bio[:300]}\n\n"
+                f"COLABORACIONES URGENTES DISPONIBLES:\n{json.dumps(collabs_summary, ensure_ascii=False)}\n\n"
+                "CRITERIOS DE RECOMENDACIÓN:\n"
+                "1. Afinidad temática de la pauta con las habilidades del periodista (ej: cobertura gráfica si sabe fotografía, redacción rápida, investigación, terreno).\n"
+                "2. Disponibilidad e inmediatez para asumir asignaciones urgentes.\n\n"
+                "Devuelve ÚNICAMENTE un objeto JSON estrictamente válido con esta estructura:\n"
+                "{\n"
+                '  "summary": "<Resumen personalizado de 1-2 oraciones explicando por qué estas colaboraciones son las más idóneas para el periodista>",\n'
+                '  "matches": [\n'
+                "    {\n"
+                '      "collab_id": <id numérico>,\n'
+                '      "match_percentage": <entero entre 65 y 98>,\n'
+                '      "compatibility_tier": "<Alta | Media | Básica>",\n'
+                '      "match_reasons": ["<razón 1>", "<razón 2>"],\n'
+                '      "highlight": "<Frase motivadora corta destacando por qué postular a esta pauta>"\n'
+                "    }\n"
+                "  ]\n"
+                "}\n"
+                "Ordena 'matches' de mayor a menor porcentaje de afinidad."
+            )
+
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800}
+            }
+
+            for model_name in self.MODELS_TO_TRY:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                try:
+                    resp = requests.post(url, headers=headers, json=payload, timeout=18)
+                    if resp.status_code == 200:
+                        candidates = resp.json().get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                            clean_json = raw_text.strip()
+                            if clean_json.startswith("```json"):
+                                clean_json = clean_json[7:]
+                            if clean_json.startswith("```"):
+                                clean_json = clean_json[3:]
+                            if clean_json.endswith("```"):
+                                clean_json = clean_json[:-3]
+                            clean_json = clean_json.strip()
+
+                            parsed = json.loads(clean_json)
+                            return {
+                                "status": "success",
+                                "source": "gemini",
+                                "model": model_name,
+                                "summary": parsed.get('summary', 'Colaboraciones recomendadas para tu perfil.'),
+                                "matches": parsed.get('matches', [])
+                            }
+                except Exception as e:
+                    logger.warning(f"Error en matchmaking_talent_to_collaborations con Gemini ({model_name}): {e}")
+
+        # 2. Respaldo heurístico local
+        local_res = self._local_talent_to_collaborations(talent_profile, collaborations)
+        return local_res
+
+    def _local_talent_to_collaborations(self, talent_profile: dict, collaborations: list) -> dict:
+        skills = [s.lower() for s in (talent_profile.get('skills') or []) if s]
+        title_lower = (talent_profile.get('title') or '').lower()
+        scored = []
+
+        for c in collaborations:
+            collab_id = c.get('id')
+            c_title = (c.get('title') or '').lower()
+            score = 70
+
+            matched_terms = []
+            for s in skills:
+                if s in c_title:
+                    score += 10
+                    matched_terms.append(s)
+
+            if "foto" in c_title and ("foto" in title_lower or any("foto" in s for s in skills)):
+                score += 15
+                matched_terms.append("fotografía")
+            if "redac" in c_title and ("redac" in title_lower or any("redac" in s for s in skills)):
+                score += 12
+                matched_terms.append("redacción")
+            if "evento" in c_title or "pauta" in c_title:
+                score += 5
+
+            score = min(max(score, 65), 96)
+            tier = 'Alta' if score >= 85 else ('Media' if score >= 75 else 'Básica')
+
+            reasons = []
+            if matched_terms:
+                reasons.append(f"Afinidad con tus habilidades de {', '.join(set(matched_terms[:2]))}.")
+            else:
+                reasons.append("Pauta periodística compatible con tu disponibilidad y perfil profesional.")
+
+            scored.append({
+                "collab_id": collab_id,
+                "match_percentage": score,
+                "compatibility_tier": tier,
+                "match_reasons": reasons,
+                "highlight": "Asignación rápida acorde a tu especialidad."
+            })
+
+        scored.sort(key=lambda x: x['match_percentage'], reverse=True)
+        return {
+            "status": "success",
+            "source": "local",
+            "summary": "Colaboraciones de última hora priorizadas según tus competencias profesionales.",
+            "matches": scored
+        }
+
     def _build_prompt(self, text: str, action: str, custom_prompt: str, target_tone: str, target_lang: str, context: str) -> str:
         ctx_info = f"Contexto: {context}.\n" if context else ""
 

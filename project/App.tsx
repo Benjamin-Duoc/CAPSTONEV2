@@ -37,6 +37,7 @@ import DestacadosModule from './components/DestacadosModule';
 import SpecialistDetailPage from './components/SpecialistDetailPage';
 import FundingDetailPage from './components/FundingDetailPage';
 import TalentDetailPage from './components/TalentDetailPage';
+import CiPressModal, { CiPressModalType } from './components/common/CiPressModal';
 
 import type { Page, User, Entrepreneurship, Course, Job, NewsArticle, PremiumSponsor, HeroHeading, PhotojournalismPost, Resource, FundingOpportunity, Specialist, ShareablePhoto, PressRelease, ShortCollaboration, EntrepreneurshipTip, SponsoredAd, CommunityPost, SpecialAd, Event, SiteStat, PartnerLogo, TalentProfile, FreelanceService, CommunityAd, NgoSpotlight, LegalTopic, PromoVideo, DestacadoArticle } from './types';
 
@@ -95,6 +96,55 @@ const App: React.FC = () => {
 
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const [appModal, setAppModal] = useState<{
+    isOpen: boolean;
+    type?: CiPressModalType;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const showAppAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+    setAppModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      confirmText: 'Entendido',
+      onConfirm: () => setAppModal(prev => ({ ...prev, isOpen: false }))
+    });
+  };
+
+  const showAppConfirm = (
+    title: string,
+    message: string,
+    onConfirm: () => void | Promise<void>,
+    confirmText = 'Eliminar',
+    type: CiPressModalType = 'danger'
+  ) => {
+    setAppModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      confirmText,
+      cancelText: 'Cancelar',
+      onConfirm: () => {
+        setAppModal(prev => ({ ...prev, isOpen: false }));
+        onConfirm();
+      },
+      onCancel: () => setAppModal(prev => ({ ...prev, isOpen: false }))
+    });
+  };
 
 
   const isAdminUser = (user: User | null) => {
@@ -217,7 +267,11 @@ const App: React.FC = () => {
         // For the purpose of this edit, we'll assume it's available.
         // If not, it would need to be implemented (e.g., using a toast library).
         const showNotification = (message: string, type: 'info' | 'success' | 'error') => {
-          alert(`${type.toUpperCase()}: ${message}`);
+          showAppAlert(
+            type === 'error' ? 'Error en Pago' : type === 'success' ? 'Pago Confirmado' : 'Estado del Pago',
+            message,
+            type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'
+          );
         };
 
         showNotification('Verificando pago...', 'info');
@@ -399,77 +453,389 @@ const App: React.FC = () => {
   // --- CRUD Operations (Connected to Backend) ---
 
   // Courses
-  const handleAddCourse = async (item: Omit<Course, 'id'>) => { try { const res = await createCourse(item); setCourses(prev => [...prev, res]); } catch (e) { alert("Error creating course"); } };
-  const handleUpdateCourse = async (item: Course) => { try { const res = await updateCourse(item); setCourses(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating course"); } };
-  const handleDeleteCourse = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteCourse(id); setCourses(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting course"); } } };
+  const handleAddCourse = async (item: Omit<Course, 'id'>) => {
+    try {
+      const res = await createCourse(item);
+      setCourses(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el curso.", "danger");
+    }
+  };
+  const handleUpdateCourse = async (item: Course) => {
+    try {
+      const res = await updateCourse(item);
+      setCourses(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el curso.", "danger");
+    }
+  };
+  const handleDeleteCourse = (id: number) => {
+    showAppConfirm('¿Eliminar Curso?', '¿Estás seguro de que deseas eliminar este curso?', async () => {
+      try {
+        await deleteCourse(id);
+        setCourses(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el curso.", "danger");
+      }
+    });
+  };
 
   // Jobs
-  const handleAddJob = async (item: Omit<Job, 'id'>) => { try { const res = await createJob(item); setJobs(prev => [...prev, res]); } catch (e) { alert("Error creating job"); } };
-  const handleUpdateJob = async (item: Job) => { try { const res = await updateJob(item); setJobs(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating job"); } };
-  const handleDeleteJob = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteJob(id); setJobs(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting job"); } } };
+  const handleAddJob = async (item: Omit<Job, 'id'>) => {
+    try {
+      const res = await createJob(item);
+      setJobs(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la oferta laboral.", "danger");
+    }
+  };
+  const handleUpdateJob = async (item: Job) => {
+    try {
+      const res = await updateJob(item);
+      setJobs(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la oferta laboral.", "danger");
+    }
+  };
+  const handleDeleteJob = (id: number) => {
+    showAppConfirm('¿Eliminar Oferta?', '¿Estás seguro de que deseas eliminar esta oferta laboral?', async () => {
+      try {
+        await deleteJob(id);
+        setJobs(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la oferta laboral.", "danger");
+      }
+    });
+  };
 
   // Entrepreneurs
-  const handleAddEntrepreneur = async (item: Omit<Entrepreneurship, 'id'>) => { try { const res = await createEntrepreneur(item); setEntrepreneurs(prev => [...prev, res]); } catch (e) { alert("Error creating entrepreneur"); } };
-  const handleUpdateEntrepreneur = async (item: Entrepreneurship) => { try { const res = await updateEntrepreneur(item); setEntrepreneurs(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating entrepreneur"); } };
-  const handleDeleteEntrepreneur = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteEntrepreneur(id); setEntrepreneurs(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting entrepreneur"); } } };
+  const handleAddEntrepreneur = async (item: Omit<Entrepreneurship, 'id'>) => {
+    try {
+      const res = await createEntrepreneur(item);
+      setEntrepreneurs(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el emprendimiento.", "danger");
+    }
+  };
+  const handleUpdateEntrepreneur = async (item: Entrepreneurship) => {
+    try {
+      const res = await updateEntrepreneur(item);
+      setEntrepreneurs(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el emprendimiento.", "danger");
+    }
+  };
+  const handleDeleteEntrepreneur = (id: number) => {
+    showAppConfirm('¿Eliminar Emprendimiento?', '¿Estás seguro de que deseas eliminar este emprendimiento?', async () => {
+      try {
+        await deleteEntrepreneur(id);
+        setEntrepreneurs(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el emprendimiento.", "danger");
+      }
+    });
+  };
 
   // Freelance Services
-  const handleAddFreelanceService = async (item: Omit<FreelanceService, 'id'>) => { try { const res = await createFreelanceService(item); setFreelanceServices(prev => [...prev, res]); } catch (e) { alert("Error creating freelance service"); } };
-  const handleUpdateFreelanceService = async (item: FreelanceService) => { try { const res = await updateFreelanceService(item); setFreelanceServices(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating freelance service"); } };
-  const handleDeleteFreelanceService = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteFreelanceService(id); setFreelanceServices(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting freelance service"); } } };
+  const handleAddFreelanceService = async (item: Omit<FreelanceService, 'id'>) => {
+    try {
+      const res = await createFreelanceService(item);
+      setFreelanceServices(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el servicio freelance.", "danger");
+    }
+  };
+  const handleUpdateFreelanceService = async (item: FreelanceService) => {
+    try {
+      const res = await updateFreelanceService(item);
+      setFreelanceServices(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el servicio freelance.", "danger");
+    }
+  };
+  const handleDeleteFreelanceService = (id: number) => {
+    showAppConfirm('¿Eliminar Servicio Freelance?', '¿Estás seguro de que deseas eliminar este servicio freelance?', async () => {
+      try {
+        await deleteFreelanceService(id);
+        setFreelanceServices(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el servicio freelance.", "danger");
+      }
+    });
+  };
 
   // News
-  const handleAddNewsArticle = async (item: Omit<NewsArticle, 'id'>) => { try { const res = await createNews(item); setNewsArticles(prev => [res, ...prev]); } catch (e) { alert("Error creating news"); } };
-  const handleUpdateNewsArticle = async (item: NewsArticle) => { try { const res = await updateNews(item); setNewsArticles(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating news"); } };
-  const handleDeleteNewsArticle = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteNews(id); setNewsArticles(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting news"); } } };
+  const executeAddNewsArticle = async (item: Omit<NewsArticle, 'id'>): Promise<NewsArticle> => {
+    const res = await createNews(item);
+    setNewsArticles(prev => [res, ...prev]);
+    return res;
+  };
+  const executeUpdateNewsArticle = async (item: NewsArticle): Promise<NewsArticle> => {
+    const res = await updateNews(item);
+    setNewsArticles(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
+  const handleAddNewsArticle = async (item: Omit<NewsArticle, 'id'>) => {
+    try {
+      await executeAddNewsArticle(item);
+      return true;
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la noticia.", "danger");
+      throw e;
+    }
+  };
+  const handleUpdateNewsArticle = async (item: NewsArticle) => {
+    try {
+      await executeUpdateNewsArticle(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la noticia.", "danger");
+    }
+  };
+  const handleDeleteNewsArticle = (id: number) => {
+    showAppConfirm('¿Eliminar Noticia?', '¿Estás seguro de que deseas eliminar esta noticia?', async () => {
+      try {
+        await deleteNews(id);
+        setNewsArticles(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la noticia.", "danger");
+      }
+    });
+  };
 
   // Destacados
-  const handleAddDestacado = async (item: Omit<DestacadoArticle, 'id'>) => { try { const res = await createDestacado(item); setDestacados(prev => [res, ...prev]); } catch (e) { alert("Error creating destacado"); } };
-  const handleUpdateDestacado = async (item: DestacadoArticle) => { try { const res = await updateDestacado(item); setDestacados(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating destacado"); } };
-  const handleDeleteDestacado = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteDestacado(id); setDestacados(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting destacado"); } } };
+  const handleAddDestacado = async (item: Omit<DestacadoArticle, 'id'>) => {
+    try {
+      const res = await createDestacado(item);
+      setDestacados(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el artículo destacado.", "danger");
+    }
+  };
+  const handleUpdateDestacado = async (item: DestacadoArticle) => {
+    try {
+      const res = await updateDestacado(item);
+      setDestacados(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el artículo destacado.", "danger");
+    }
+  };
+  const handleDeleteDestacado = (id: number) => {
+    showAppConfirm('¿Eliminar Destacado?', '¿Estás seguro de que deseas eliminar este artículo destacado?', async () => {
+      try {
+        await deleteDestacado(id);
+        setDestacados(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el artículo destacado.", "danger");
+      }
+    });
+  };
 
   // Sponsors
-  const handleAddSponsor = async (item: Omit<PremiumSponsor, 'id'>) => { try { const res = await createPremiumSponsor(item); setPremiumSponsors(prev => [...prev, res]); } catch (e) { alert("Error creating sponsor"); } };
-  const handleUpdateSponsor = async (item: PremiumSponsor) => { try { const res = await updatePremiumSponsor(item); setPremiumSponsors(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating sponsor"); } };
-  const handleDeleteSponsor = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deletePremiumSponsor(id); setPremiumSponsors(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting sponsor"); } } };
+  const executeAddSponsor = async (item: Omit<PremiumSponsor, 'id'>): Promise<PremiumSponsor> => {
+    const res = await createPremiumSponsor(item);
+    setPremiumSponsors(prev => [...prev, res]);
+    return res;
+  };
+  const executeUpdateSponsor = async (item: PremiumSponsor): Promise<PremiumSponsor> => {
+    const res = await updatePremiumSponsor(item);
+    setPremiumSponsors(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
+  const handleAddSponsor = async (item: Omit<PremiumSponsor, 'id'>) => {
+    try {
+      await executeAddSponsor(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el patrocinador.", "danger");
+    }
+  };
+  const handleUpdateSponsor = async (item: PremiumSponsor) => {
+    try {
+      await executeUpdateSponsor(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el patrocinador.", "danger");
+    }
+  };
+  const handleDeleteSponsor = (id: number) => {
+    showAppConfirm('¿Eliminar Patrocinador?', '¿Estás seguro de que deseas eliminar este patrocinador?', async () => {
+      try {
+        await deletePremiumSponsor(id);
+        setPremiumSponsors(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el patrocinador.", "danger");
+      }
+    });
+  };
 
   // Press Releases
+  const executeAddPressRelease = async (item: Omit<PressRelease, 'id'>): Promise<PressRelease> => {
+    const res = await createPressRelease(item);
+    setPressReleases(prev => [res, ...prev]);
+    return res;
+  };
+  const executeUpdatePressRelease = async (item: PressRelease): Promise<PressRelease> => {
+    const res = await updatePressRelease(item);
+    setPressReleases(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
   const handleAddPressRelease = async (item: Omit<PressRelease, 'id'>) => { 
     try { 
-      const res = await createPressRelease(item); 
-      setPressReleases(prev => [res, ...prev]); 
+      await executeAddPressRelease(item); 
       return true; 
     } catch (e: any) { 
-      alert(e.message || "Error al crear el comunicado"); 
+      showAppAlert("Error", e.message || "Error al crear el comunicado", "danger"); 
       return false; 
     } 
   };
-  const handleUpdatePressRelease = async (item: PressRelease) => { try { const res = await updatePressRelease(item); setPressReleases(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating press release"); } };
-  const handleDeletePressRelease = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deletePressRelease(id); setPressReleases(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting press release"); } } };
+  const handleUpdatePressRelease = async (item: PressRelease) => {
+    try {
+      await executeUpdatePressRelease(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el comunicado.", "danger");
+    }
+  };
+  const executeDeletePressRelease = async (id: number): Promise<void> => {
+    await deletePressRelease(id);
+    setPressReleases(prev => prev.filter(i => i.id !== id));
+  };
+  const handleDeletePressRelease = (id: number) => {
+    showAppConfirm('¿Eliminar Comunicado?', '¿Estás seguro de que deseas eliminar este comunicado?', async () => {
+      try {
+        await executeDeletePressRelease(id);
+        showAppAlert("Comunicado Eliminado", "El comunicado ha sido eliminado exitosamente.", "success");
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el comunicado.", "danger");
+      }
+    });
+  };
 
   // Photojournalism
-  const handleAddPhotojournalismPost = async (item: Omit<PhotojournalismPost, 'id'>) => { try { const res = await createPhotojournalismPost({ ...item, dateAdded: new Date().toISOString() }); setPhotojournalismPosts(prev => [res, ...prev]); } catch (e) { alert("Error creating photo post"); } };
-  const handleUpdatePhotojournalismPost = async (item: PhotojournalismPost) => { try { const res = await updatePhotojournalismPost(item); setPhotojournalismPosts(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating photo post"); } };
-  const handleDeletePhotojournalismPost = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deletePhotojournalismPost(id); setPhotojournalismPosts(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting photo post"); } } };
+  const handleAddPhotojournalismPost = async (item: Omit<PhotojournalismPost, 'id'>) => {
+    try {
+      const res = await createPhotojournalismPost({ ...item, dateAdded: new Date().toISOString() });
+      setPhotojournalismPosts(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la foto.", "danger");
+    }
+  };
+  const handleUpdatePhotojournalismPost = async (item: PhotojournalismPost) => {
+    try {
+      const res = await updatePhotojournalismPost(item);
+      setPhotojournalismPosts(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la foto.", "danger");
+    }
+  };
+  const handleDeletePhotojournalismPost = (id: number) => {
+    showAppConfirm('¿Eliminar Publicación Fotográfica?', '¿Estás seguro de que deseas eliminar esta fotografía?', async () => {
+      try {
+        await deletePhotojournalismPost(id);
+        setPhotojournalismPosts(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la publicación fotográfica.", "danger");
+      }
+    });
+  };
 
   // Funding
-  const handleAddFundingOpportunity = async (item: Omit<FundingOpportunity, 'id'>) => { try { const res = await createFundingOpportunity(item); setFundingOpportunities(prev => [...prev, res]); } catch (e) { alert("Error creating funding"); } };
-  const handleUpdateFundingOpportunity = async (item: FundingOpportunity) => { try { const res = await updateFundingOpportunity(item); setFundingOpportunities(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating funding"); } };
-  const handleDeleteFundingOpportunity = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteFundingOpportunity(id); setFundingOpportunities(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting funding"); } } };
+  const handleAddFundingOpportunity = async (item: Omit<FundingOpportunity, 'id'>) => {
+    try {
+      const res = await createFundingOpportunity(item);
+      setFundingOpportunities(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la oportunidad de financiamiento.", "danger");
+    }
+  };
+  const handleUpdateFundingOpportunity = async (item: FundingOpportunity) => {
+    try {
+      const res = await updateFundingOpportunity(item);
+      setFundingOpportunities(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la oportunidad de financiamiento.", "danger");
+    }
+  };
+  const handleDeleteFundingOpportunity = (id: number) => {
+    showAppConfirm('¿Eliminar Fondo?', '¿Estás seguro de que deseas eliminar esta oportunidad de fondo?', async () => {
+      try {
+        await deleteFundingOpportunity(id);
+        setFundingOpportunities(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el fondo.", "danger");
+      }
+    });
+  };
 
   // Specialists
-  const handleAddSpecialist = async (item: Omit<Specialist, 'id' | 'dateAdded'>) => { try { const res = await createSpecialist({ ...item, dateAdded: new Date().toISOString().split('T')[0] }); setSpecialists(prev => [res, ...prev]); } catch (e) { alert("Error creating specialist"); } };
-  const handleUpdateSpecialist = async (item: Specialist) => { try { const res = await updateSpecialist(item); setSpecialists(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating specialist"); } };
-  const handleDeleteSpecialist = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteSpecialist(id); setSpecialists(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting specialist"); } } };
+  const executeAddSpecialist = async (item: Omit<Specialist, 'id' | 'dateAdded'>): Promise<Specialist> => {
+    const res = await createSpecialist({ ...item, dateAdded: new Date().toISOString().split('T')[0] });
+    setSpecialists(prev => [res, ...prev]);
+    return res;
+  };
+  const executeUpdateSpecialist = async (item: Specialist): Promise<Specialist> => {
+    const res = await updateSpecialist(item);
+    setSpecialists(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
+  const handleAddSpecialist = async (item: Omit<Specialist, 'id' | 'dateAdded'>) => {
+    try {
+      await executeAddSpecialist(item);
+      return true;
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la fuente especializada.", "danger");
+      throw e;
+    }
+  };
+  const handleUpdateSpecialist = async (item: Specialist) => {
+    try {
+      await executeUpdateSpecialist(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la fuente especializada.", "danger");
+    }
+  };
+  const handleDeleteSpecialist = (id: number) => {
+    showAppConfirm('¿Eliminar Fuente?', '¿Estás seguro de que deseas eliminar esta fuente especializada?', async () => {
+      try {
+        await deleteSpecialist(id);
+        setSpecialists(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la fuente.", "danger");
+      }
+    });
+  };
 
   // Shareable Photos
-  const handleAddShareablePhoto = async (item: Omit<ShareablePhoto, 'id' | 'dateAdded'>) => { try { const res = await createShareablePhoto({ ...item, dateAdded: new Date().toISOString() }); setShareablePhotos(prev => [res, ...prev]); } catch (e) { alert("Error creating shareable photo"); } };
-  const handleUpdateShareablePhoto = async (item: ShareablePhoto) => { try { const res = await updateShareablePhoto(item); setShareablePhotos(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating shareable photo"); } };
-  const handleDeleteShareablePhoto = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteShareablePhoto(id); setShareablePhotos(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting shareable photo"); } } };
+  const handleAddShareablePhoto = async (item: Omit<ShareablePhoto, 'id' | 'dateAdded'>) => {
+    try {
+      const res = await createShareablePhoto({ ...item, dateAdded: new Date().toISOString() });
+      setShareablePhotos(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la foto para descarga.", "danger");
+    }
+  };
+  const handleUpdateShareablePhoto = async (item: ShareablePhoto) => {
+    try {
+      const res = await updateShareablePhoto(item);
+      setShareablePhotos(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la foto para descarga.", "danger");
+    }
+  };
+  const handleDeleteShareablePhoto = (id: number) => {
+    showAppConfirm('¿Eliminar Foto?', '¿Estás seguro de que deseas eliminar esta fotografía para descarga?', async () => {
+      try {
+        await deleteShareablePhoto(id);
+        setShareablePhotos(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la foto.", "danger");
+      }
+    });
+  };
 
   // Community Posts
   const handleAddCommunityPost = async (item: Omit<CommunityPost, 'id' | 'authorName' | 'authorAvatarUrl'>) => {
-    if (!currentUser) { alert('Debes iniciar sesión'); return; }
+    if (!currentUser) {
+      showAppAlert('Acceso Requerido', 'Debes iniciar sesión para publicar en la comunidad.', 'warning');
+      return;
+    }
     try {
       const userProfile = talentProfiles.find(p => p.userId === currentUser.id);
       const userAvatar = userProfile?.avatarUrl || 'https://i.pravatar.cc/150?u=' + currentUser.email;
@@ -482,67 +848,250 @@ const App: React.FC = () => {
       };
       const res = await createCommunityPost(newItem);
       setCommunityPosts(prev => [res, ...prev]);
-      alert('¡Publicado!');
-    } catch (e) { alert("Error creating post"); }
+      showAppAlert('Publicado', '¡Publicación enviada con éxito!', 'success');
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la publicación.", "danger");
+    }
   };
-  const handleAddCommunityPostAdmin = async (item: Omit<CommunityPost, 'id'>) => { try { const res = await createCommunityPost(item); setCommunityPosts(prev => [res, ...prev]); } catch (e) { alert("Error creating post"); } };
+  const handleAddCommunityPostAdmin = async (item: Omit<CommunityPost, 'id'>) => {
+    try {
+      const res = await createCommunityPost(item);
+      setCommunityPosts(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la publicación.", "danger");
+    }
+  };
   const handleUpdateCommunityPost = async (item: CommunityPost) => {
-    if (!isCommunityPostOwner(item)) { alert('No tienes permiso'); return; }
-    try { const res = await updateCommunityPost(item); setCommunityPosts(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating post"); }
+    if (!isCommunityPostOwner(item)) {
+      showAppAlert('Sin Permisos', 'No tienes permiso para editar esta publicación.', 'warning');
+      return;
+    }
+    try {
+      const res = await updateCommunityPost(item);
+      setCommunityPosts(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la publicación.", "danger");
+    }
   };
-  const handleDeleteCommunityPost = async (id: number) => {
+  const handleDeleteCommunityPost = (id: number) => {
     const post = communityPosts.find(p => p.id === id);
-    if (post && !isCommunityPostOwner(post)) { alert('No tienes permiso'); return; }
-    if (window.confirm('Eliminar?')) { try { await deleteCommunityPost(id); setCommunityPosts(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting post"); } }
+    if (post && !isCommunityPostOwner(post)) {
+      showAppAlert('Sin Permisos', 'No tienes permiso para eliminar esta publicación.', 'warning');
+      return;
+    }
+    showAppConfirm('¿Eliminar Publicación?', '¿Estás seguro de que deseas eliminar esta publicación de la comunidad?', async () => {
+      try {
+        await deleteCommunityPost(id);
+        setCommunityPosts(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la publicación.", "danger");
+      }
+    });
   };
 
   // Short Collaborations
-  const handleAddShortCollaboration = async (item: Omit<ShortCollaboration, 'id'>) => { try { const res = await createShortCollaboration(item); setShortCollaborations(prev => [res, ...prev]); } catch (e) { alert("Error creating collaboration"); } };
-  const handleUpdateShortCollaboration = async (item: ShortCollaboration) => { try { const res = await updateShortCollaboration(item); setShortCollaborations(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating collaboration"); } };
-  const handleDeleteShortCollaboration = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteShortCollaboration(id); setShortCollaborations(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting collaboration"); } } };
+  const executeAddShortCollaboration = async (item: Omit<ShortCollaboration, 'id'>): Promise<ShortCollaboration> => {
+    const res = await createShortCollaboration(item);
+    setShortCollaborations(prev => [res, ...prev]);
+    return res;
+  };
+  const executeUpdateShortCollaboration = async (item: ShortCollaboration): Promise<ShortCollaboration> => {
+    const res = await updateShortCollaboration(item);
+    setShortCollaborations(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
+  const handleAddShortCollaboration = async (item: Omit<ShortCollaboration, 'id'>) => {
+    try {
+      await executeAddShortCollaboration(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear la colaboración urgente.", "danger");
+    }
+  };
+  const handleUpdateShortCollaboration = async (item: ShortCollaboration) => {
+    try {
+      await executeUpdateShortCollaboration(item);
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la colaboración urgente.", "danger");
+    }
+  };
+  const executeDeleteShortCollaboration = async (id: number): Promise<void> => {
+    await deleteShortCollaboration(id);
+    setShortCollaborations(prev => prev.filter(i => i.id !== id));
+  };
+  const handleDeleteShortCollaboration = (id: number) => {
+    showAppConfirm('¿Eliminar Colaboración?', '¿Estás seguro de que deseas eliminar este aviso de colaboración urgente?', async () => {
+      try {
+        await executeDeleteShortCollaboration(id);
+        showAppAlert("Colaboración Eliminada", "El aviso ha sido eliminado exitosamente.", "success");
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar la colaboración.", "danger");
+      }
+    });
+  };
 
   // Tips
-  const handleAddEntrepreneurshipTip = async (item: Omit<EntrepreneurshipTip, 'id'>) => { try { const res = await createEntrepreneurshipTip(item); setEntrepreneurshipTips(prev => [res, ...prev]); } catch (e) { alert("Error creating tip"); } };
-  const handleUpdateEntrepreneurshipTip = async (item: EntrepreneurshipTip) => { try { const res = await updateEntrepreneurshipTip(item); setEntrepreneurshipTips(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating tip"); } };
-  const handleDeleteEntrepreneurshipTip = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteEntrepreneurshipTip(id); setEntrepreneurshipTips(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting tip"); } } };
+  const handleAddEntrepreneurshipTip = async (item: Omit<EntrepreneurshipTip, 'id'>) => {
+    try {
+      const res = await createEntrepreneurshipTip(item);
+      setEntrepreneurshipTips(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el consejo de emprendimiento.", "danger");
+    }
+  };
+  const handleUpdateEntrepreneurshipTip = async (item: EntrepreneurshipTip) => {
+    try {
+      const res = await updateEntrepreneurshipTip(item);
+      setEntrepreneurshipTips(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el consejo.", "danger");
+    }
+  };
+  const handleDeleteEntrepreneurshipTip = (id: number) => {
+    showAppConfirm('¿Eliminar Consejo?', '¿Estás seguro de que deseas eliminar este consejo?', async () => {
+      try {
+        await deleteEntrepreneurshipTip(id);
+        setEntrepreneurshipTips(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el consejo.", "danger");
+      }
+    });
+  };
 
   // Sponsored Ads
-  const handleAddSponsoredAd = async (item: Omit<SponsoredAd, 'id'>) => { try { const res = await createSponsoredAd(item); setSponsoredAds(prev => [res, ...prev]); } catch (e) { alert("Error creating ad"); } };
-  const handleUpdateSponsoredAd = async (item: SponsoredAd) => { try { const res = await updateSponsoredAd(item); setSponsoredAds(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating ad"); } };
-  const handleDeleteSponsoredAd = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteSponsoredAd(id); setSponsoredAds(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting ad"); } } };
+  const handleAddSponsoredAd = async (item: Omit<SponsoredAd, 'id'>) => {
+    try {
+      const res = await createSponsoredAd(item);
+      setSponsoredAds(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el anuncio patrocinado.", "danger");
+    }
+  };
+  const handleUpdateSponsoredAd = async (item: SponsoredAd) => {
+    try {
+      const res = await updateSponsoredAd(item);
+      setSponsoredAds(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el anuncio patrocinado.", "danger");
+    }
+  };
+  const handleDeleteSponsoredAd = (id: number) => {
+    showAppConfirm('¿Eliminar Anuncio?', '¿Estás seguro de que deseas eliminar este anuncio patrocinado?', async () => {
+      try {
+        await deleteSponsoredAd(id);
+        setSponsoredAds(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el anuncio.", "danger");
+      }
+    });
+  };
 
   // Events
-  const handleAddEvent = async (item: Omit<Event, 'id'>) => { try { const res = await createEvent(item); setEvents(prev => [...prev, res]); } catch (e) { alert("Error creating event"); } };
-  const handleUpdateEvent = async (item: Event) => { try { const res = await updateEvent(item); setEvents(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating event"); } };
-  const handleDeleteEvent = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteEvent(id); setEvents(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting event"); } } };
+  const handleAddEvent = async (item: Omit<Event, 'id'>) => {
+    try {
+      const res = await createEvent(item);
+      setEvents(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el evento.", "danger");
+    }
+  };
+  const handleUpdateEvent = async (item: Event) => {
+    try {
+      const res = await updateEvent(item);
+      setEvents(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el evento.", "danger");
+    }
+  };
+  const handleDeleteEvent = (id: number) => {
+    showAppConfirm('¿Eliminar Evento?', '¿Estás seguro de que deseas eliminar este evento?', async () => {
+      try {
+        await deleteEvent(id);
+        setEvents(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el evento.", "danger");
+      }
+    });
+  };
 
   // Partner Logos
-  const handleAddPartnerLogo = async (item: Omit<PartnerLogo, 'id'>) => { try { const res = await createPartnerLogo(item); setPartnerLogos(prev => [...prev, res]); } catch (e) { alert("Error creating logo"); } };
-  const handleUpdatePartnerLogo = async (item: PartnerLogo) => { try { const res = await updatePartnerLogo(item); setPartnerLogos(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating logo"); } };
-  const handleDeletePartnerLogo = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deletePartnerLogo(id); setPartnerLogos(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting logo"); } } };
+  const handleAddPartnerLogo = async (item: Omit<PartnerLogo, 'id'>) => {
+    try {
+      const res = await createPartnerLogo(item);
+      setPartnerLogos(prev => [...prev, res]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el logo aliado.", "danger");
+    }
+  };
+  const handleUpdatePartnerLogo = async (item: PartnerLogo) => {
+    try {
+      const res = await updatePartnerLogo(item);
+      setPartnerLogos(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el logo aliado.", "danger");
+    }
+  };
+  const handleDeletePartnerLogo = (id: number) => {
+    showAppConfirm('¿Eliminar Logo?', '¿Estás seguro de que deseas eliminar este logo aliado?', async () => {
+      try {
+        await deletePartnerLogo(id);
+        setPartnerLogos(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el logo aliado.", "danger");
+      }
+    });
+  };
 
   // Talent Profiles
-  const handleAddTalentProfile = async (item: Omit<TalentProfile, 'id'>) => { try { const res = await createTalentProfile(item); setTalentProfiles(prev => [res, ...prev]); } catch (e) { alert("Error creating profile"); } };
-  const handleUpdateTalentProfile = async (item: TalentProfile) => { try { const res = await updateTalentProfile(item); setTalentProfiles(prev => prev.map(i => i.id === res.id ? res : i)); } catch (e) { alert("Error updating profile"); } };
-  const handleDeleteTalentProfile = async (id: number) => { if (window.confirm('Eliminar?')) { try { await deleteTalentProfile(id); setTalentProfiles(prev => prev.filter(i => i.id !== id)); } catch (e) { alert("Error deleting profile"); } } };
+  const handleAddTalentProfile = async (item: Omit<TalentProfile, 'id'>) => {
+    try {
+      const res = await createTalentProfile(item);
+      setTalentProfiles(prev => [res, ...prev]);
+    } catch (e) {
+      showAppAlert("Error", "Error al crear el perfil de talento.", "danger");
+    }
+  };
+  const handleUpdateTalentProfile = async (item: TalentProfile) => {
+    try {
+      const res = await updateTalentProfile(item);
+      setTalentProfiles(prev => prev.map(i => i.id === res.id ? res : i));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar el perfil de talento.", "danger");
+    }
+  };
+  const handleDeleteTalentProfile = (id: number) => {
+    showAppConfirm('¿Eliminar Perfil?', '¿Estás seguro de que deseas eliminar este perfil de talento?', async () => {
+      try {
+        await deleteTalentProfile(id);
+        setTalentProfiles(prev => prev.filter(i => i.id !== id));
+      } catch (e) {
+        showAppAlert("Error", "Error al eliminar el perfil de talento.", "danger");
+      }
+    });
+  };
 
   // Special Updates
   const handleUpdateHeroHeading = async (h: HeroHeading) => {
     setHeroHeading(h);
     try {
       await saveHeroHeading(h);
-      alert("Los cambios en el título principal se han guardado correctamente.");
+      showAppAlert("Título Actualizado", "Los cambios en el título principal se han guardado correctamente.", "success");
     } catch (e) {
       console.error(e);
-      alert("Hubo un error al guardar los cambios.");
+      showAppAlert("Error al Guardar", "Hubo un error al guardar los cambios del título.", "danger");
     }
   };
   const handleUpdateSpecialAd = async (ad: SpecialAd) => { setSpecialAds(prev => prev.map(a => a.id === ad.id ? ad : a)); try { await updateSpecialAd(ad); } catch (e) { console.error(e); } };
-  const handleUpdateStat = async (stat: SiteStat) => { try { const res = await updateStat(stat); setStats(prev => prev.map(s => s.id === res.id ? res : s)); } catch (e) { alert("Error updating statistic"); } };
+  const handleUpdateStat = async (stat: SiteStat) => {
+    try {
+      const res = await updateStat(stat);
+      setStats(prev => prev.map(s => s.id === res.id ? res : s));
+    } catch (e) {
+      showAppAlert("Error", "Error al actualizar la estadística.", "danger");
+    }
+  };
   const handleUpdateRotationInterval = async (val: number) => { setRotationInterval(val); try { await saveRotationInterval(val); } catch (e) { console.error(e); } };
   const handleRateFreelanceService = async (id: number, rating: number) => {
     // Optimistic rating update logic could go here
-    // For now simple alert as placeholder
     console.log("Rating service", id, rating);
   };
 
@@ -551,13 +1100,13 @@ const App: React.FC = () => {
     try {
       const res = await registerUser(user);
       if (res.success) {
-        alert(res.message);
+        showAppAlert("Usuario Creado", res.message, "success");
         setUsers(await getAllUsers()); // Refresh list
       } else {
-        alert(res.message);
+        showAppAlert("Aviso", res.message, "warning");
       }
     } catch (e) {
-      alert("Error creating user");
+      showAppAlert("Error", "Error al crear el usuario.", "danger");
     }
   };
 
@@ -565,30 +1114,30 @@ const App: React.FC = () => {
     try {
       const res = await updateUser(user);
       if (res.success) {
-        alert(res.message);
+        showAppAlert("Usuario Actualizado", res.message, "success");
         setUsers(await getAllUsers()); // Refresh list
       } else {
-        alert(res.message);
+        showAppAlert("Aviso", res.message, "warning");
       }
     } catch (e) {
-      alert("Error updating user");
+      showAppAlert("Error", "Error al actualizar el usuario.", "danger");
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (window.confirm('¿Eliminar usuario?')) {
+  const handleDeleteUser = (id: number) => {
+    showAppConfirm('¿Eliminar Usuario?', '¿Estás seguro de que deseas eliminar este usuario?', async () => {
       try {
         const res = await deleteUser(id);
         if (res.success) {
-          alert(res.message);
+          showAppAlert("Usuario Eliminado", res.message, "success");
           setUsers(prev => prev.filter(u => u.id !== id));
         } else {
-          alert(res.message);
+          showAppAlert("Aviso", res.message, "warning");
         }
       } catch (e) {
-        alert("Error deleting user");
+        showAppAlert("Error", "Error al eliminar el usuario.", "danger");
       }
-    }
+    });
   };
 
   const handleUpdateProfile = async (updatedUser: User) => {
@@ -596,13 +1145,13 @@ const App: React.FC = () => {
       const res = await updateUser(updatedUser);
       if (res.success) {
         setCurrentUser(res.user || updatedUser);
-        alert(res.message);
+        showAppAlert("Perfil Actualizado", res.message, "success");
         setUsers(await getAllUsers()); // Refresh global list too
       } else {
-        alert(res.message);
+        showAppAlert("Aviso", res.message, "warning");
       }
     } catch (e) {
-      alert("Error al actualizar el perfil");
+      showAppAlert("Error", "Error al actualizar el perfil.", "danger");
     }
   };
 
@@ -611,7 +1160,7 @@ const App: React.FC = () => {
     if (selectedSponsor) return <SponsorDetailPage sponsor={selectedSponsor} onBack={() => setSelectedSponsor(null)} />;
     if (selectedNewsArticle) return <NewsDetailPage article={selectedNewsArticle} onBack={() => setSelectedNewsArticle(null)} />;
     if (selectedDestacado) return <NewsDetailPage article={selectedDestacado as unknown as NewsArticle} onBack={() => setSelectedDestacado(null)} />;
-    if (selectedJob) return <JobDetailPage job={selectedJob} onBack={() => setSelectedJob(null)} />;
+    if (selectedJob) return <JobDetailPage job={selectedJob} currentUser={currentUser} onBack={() => setSelectedJob(null)} />;
     if (selectedPressRelease) return <PressReleaseDetailPage pressRelease={selectedPressRelease} onBack={() => setSelectedPressRelease(null)} />;
     if (selectedPhotoPost) return <PhotojournalismDetailPage post={selectedPhotoPost} onBack={() => setSelectedPhotoPost(null)} />;
     if (selectedCourse) return <CourseDetailPage course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
@@ -653,7 +1202,22 @@ const App: React.FC = () => {
         />;
       case 'courses': return <CoursesModule courses={courses} onSelectCourse={handleSelectCourse} onBack={() => handleNavigate('home')} />;
       case 'entrepreneurship': return <EntrepreneurshipModule entrepreneurships={entrepreneurs} onBack={() => handleNavigate('home')} />;
-      case 'opportunities': return <OpportunitiesModule jobs={jobs} onSelectJob={handleSelectJob} initialTab={initialTab || 'jobs'} currentUser={currentUser} onNavigate={handleNavigate} rotationInterval={rotationInterval} onSelectTalent={handleSelectTalent} onBack={() => handleNavigate('home')} />;
+      case 'opportunities': return (
+        <OpportunitiesModule 
+          jobs={jobs} 
+          shortCollaborations={shortCollaborations}
+          onAddShortCollaboration={executeAddShortCollaboration}
+          onUpdateShortCollaboration={executeUpdateShortCollaboration}
+          onDeleteShortCollaboration={executeDeleteShortCollaboration}
+          onSelectJob={handleSelectJob} 
+          initialTab={initialTab || 'jobs'} 
+          currentUser={currentUser} 
+          onNavigate={handleNavigate} 
+          rotationInterval={rotationInterval} 
+          onSelectTalent={handleSelectTalent} 
+          onBack={() => handleNavigate('home')} 
+        />
+      );
       case 'funding': return <FundingModule fundingOpportunities={fundingOpportunities} onSelectFunding={handleSelectFunding} onBack={() => handleNavigate('home')} />;
       case 'destacados': return <DestacadosModule destacados={destacados} onSelectDestacado={handleSelectDestacado} onBack={() => handleNavigate('home')} />;
       case 'analysis': return <NewsModule newsArticles={newsArticles} onSelectNewsArticle={handleSelectNewsArticle} onBack={() => handleNavigate('home')} />;
@@ -683,8 +1247,8 @@ const App: React.FC = () => {
              currentUser={currentUser}
              onLogout={handleLogout}
              premiumSponsors={premiumSponsors}
-             onAddSponsor={handleAddSponsor}
-             onUpdateSponsor={handleUpdateSponsor}
+             onAddSponsor={executeAddSponsor}
+             onUpdateSponsor={executeUpdateSponsor}
            />;
         } else {
            // Administrador, Colaborador Premium y Colaborador Gratis -> Panel Completo (Controlado internamente por rol)
@@ -694,17 +1258,17 @@ const App: React.FC = () => {
              onNavigate={handleNavigate} 
              onUpdateProfile={handleUpdateProfile}
              premiumSponsors={premiumSponsors}
-             onAddSponsor={handleAddSponsor}
-             onUpdateSponsor={handleUpdateSponsor}
+             onAddSponsor={executeAddSponsor}
+             onUpdateSponsor={executeUpdateSponsor}
              pressReleases={pressReleases}
-             onAddPressRelease={handleAddPressRelease}
-             onUpdatePressRelease={handleUpdatePressRelease}
-             onDeletePressRelease={handleDeletePressRelease}
+             onAddPressRelease={executeAddPressRelease}
+             onUpdatePressRelease={executeUpdatePressRelease}
+             onDeletePressRelease={executeDeletePressRelease}
              onGalleriesUpdated={refreshGalleries}
              shortCollaborations={shortCollaborations}
-             onAddShortCollaboration={handleAddShortCollaboration}
-             onUpdateShortCollaboration={handleUpdateShortCollaboration}
-             onDeleteShortCollaboration={handleDeleteShortCollaboration}
+             onAddShortCollaboration={executeAddShortCollaboration}
+             onUpdateShortCollaboration={executeUpdateShortCollaboration}
+             onDeleteShortCollaboration={executeDeleteShortCollaboration}
              initialSection={
                initialTab === 'talent' ? 'Mi Perfil de Talento' : 
                initialTab === 'comunicado' ? 'Redactar Comunicado' : 
@@ -784,6 +1348,17 @@ const App: React.FC = () => {
       {!selectedEntrepreneur && !selectedSponsor && !selectedNewsArticle && !selectedDestacado && !selectedJob && !selectedPressRelease && !selectedCourse && !selectedPhotoPost && currentPage !== 'register' && currentPage !== 'login' && (
         <Footer onNavigate={handleNavigate} partnerLogos={partnerLogos} currentUser={currentUser} />
       )}
+
+      <CiPressModal
+        isOpen={appModal.isOpen}
+        type={appModal.type}
+        title={appModal.title}
+        message={appModal.message}
+        confirmText={appModal.confirmText}
+        cancelText={appModal.cancelText}
+        onConfirm={appModal.onConfirm}
+        onCancel={appModal.onCancel || (() => setAppModal(prev => ({ ...prev, isOpen: false })))}
+      />
 
     </div>
   );

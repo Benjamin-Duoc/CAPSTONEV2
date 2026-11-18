@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { User, PremiumSponsor, ReportContentItem } from '../../types';
 import { PhotoIcon, LinkIcon } from '@heroicons/react/24/outline';
 import ContentEditor from '../admin/ContentEditor';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 
 interface ConfianEnCipressViewProps {
     currentUser: User;
@@ -26,6 +27,30 @@ const ConfianEnCipressView: React.FC<ConfianEnCipressViewProps> = ({ currentUser
 
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'exterior' | 'interior'>('exterior');
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -55,9 +80,9 @@ const ConfianEnCipressView: React.FC<ConfianEnCipressViewProps> = ({ currentUser
         setIsSaving(true);
         try {
             await onSave(formData);
-            alert('¡Tu tarjeta de presentacion ha sido guardada con éxito en "Confían en CiPress"!');
+            showAlert('Tarjeta Guardada', '¡Tu tarjeta de presentación ha sido guardada con éxito en "Confían en CiPress"!', 'success');
         } catch (error) {
-            alert('Hubo un error al guardar la tarjeta.');
+            showAlert('Error al Guardar', 'Hubo un error al guardar la tarjeta de presentación. Por favor intenta nuevamente.', 'danger');
         } finally {
             setIsSaving(false);
         }
@@ -240,6 +265,16 @@ const ConfianEnCipressView: React.FC<ConfianEnCipressViewProps> = ({ currentUser
 
                 </form>
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

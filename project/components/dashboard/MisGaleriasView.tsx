@@ -6,6 +6,7 @@ import {
     PlusIcon
 } from '@heroicons/react/24/outline';
 import AIWritingAssistant from '../ai/AIWritingAssistant';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 import { ENV } from '../../src/config/env';
 import { requestImageHashtags } from '../../utils/aiClient';
 
@@ -62,6 +63,70 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
     const [photoPosts, setPhotoPosts] = useState<PhotojournalismPost[]>([]);
     const [shareablePhotos, setShareablePhotos] = useState<ShareablePhoto[]>([]);
 
+    // Estado para Diálogos y Modales con Estética CiPress
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        cancelText?: string;
+        showCancel?: boolean;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const closeModal = () => setModalConfig(prev => ({ ...prev, isOpen: false }));
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            showCancel: false,
+            onConfirm: closeModal
+        });
+    };
+
+    const handleTabSwitch = (newTab: 'periodismo' | 'galeria') => {
+        if (activeTab === newTab) return;
+        if (selectedFiles.length > 0) {
+            setModalConfig({
+                isOpen: true,
+                type: 'warning',
+                title: 'Fotos Pendientes por Subir',
+                message: 'Tienes fotos seleccionadas que aún no han sido publicadas. ¿Deseas descartarlas y cambiar de sección?',
+                confirmText: 'Descartar y Cambiar',
+                cancelText: 'Seguir Editando',
+                showCancel: true,
+                onConfirm: () => {
+                    setSelectedFiles([]);
+                    setBatchTitle('');
+                    setBatchCaption('');
+                    setBatchPrice('');
+                    setHashtags([]);
+                    setActiveTab(newTab);
+                    closeModal();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            return;
+        }
+        setSelectedFiles([]);
+        setBatchTitle('');
+        setBatchCaption('');
+        setBatchPrice('');
+        setHashtags([]);
+        setActiveTab(newTab);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     useEffect(() => {
         // Fetch local definitions (mock)
         const fetchGalleries = async () => {
@@ -93,7 +158,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
             } else {
                 // Hasta 20 fotos para Galería Fotográfica
                 if (selectedFiles.length + filesArray.length > 20) {
-                    alert('Puedes subir un máximo de 20 imágenes por lote.');
+                    showAlert('Límite de Imágenes', 'Puedes subir un máximo de 20 imágenes por lote en la Galería Fotográfica.', 'warning');
                     return;
                 }
                 setSelectedFiles(prev => [...prev, ...filesArray]);
@@ -138,12 +203,12 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
         // Validaciones según el tipo de galería
         if (activeTab === 'periodismo') {
             if (!batchTitle.trim() || !batchCaption.trim()) {
-                alert('Tanto el Título del Reportaje como la Descripción Común son obligatorios para Foto-Periodismo.');
+                showAlert('Campos Obligatorios', 'Tanto el Título del Reportaje como la Descripción Común son obligatorios para Foto-Periodismo.', 'warning');
                 return;
             }
         } else {
             if (!batchTitle.trim() || !batchPrice.trim()) {
-                alert('El Nombre (Colección/Tema) y el Precio son obligatorios para la Galería Fotográfica.');
+                showAlert('Campos Obligatorios', 'El Nombre (Colección/Tema) y el Precio son obligatorios para la Galería Fotográfica.', 'warning');
                 return;
             }
         }
@@ -213,7 +278,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                         }
                     } else if (saveRes.status === 403) {
                         const errData = await saveRes.json();
-                        alert(errData.message || 'Límite de cuota alcanzado.');
+                        showAlert('Límite de Cuota', errData.message || 'Has alcanzado el límite de cuota para tu tipo de cuenta.', 'warning');
                         break; // Stop batch upload
                     }
                 }
@@ -233,29 +298,41 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
 
         if (onGalleriesUpdated) onGalleriesUpdated();
 
-        alert(`¡Subida completada! Se guardaron ${successCount} de ${total} fotos.`);
+        showAlert('Subida Exitosa', `¡Subida completada! Se guardaron ${successCount} de ${total} fotos exitosamente en CiPress.`, 'success');
     };
 
-    const handleDeletePhoto = async (id: number, type: 'periodismo' | 'galeria') => {
-        if (!window.confirm('¿Estás seguro de que deseas eliminar esta foto?')) return;
-        const endpoint = type === 'periodismo' ? `${API_BASE}/photojournalism-posts/${id}` : `${API_BASE}/shareable-photos/${id}`;
-        try {
-            const res = await fetch(endpoint, { method: 'DELETE' });
-            if (res.ok || res.status === 204) {
-                if (type === 'periodismo') {
-                    setPhotoPosts(prev => prev.filter(p => p.id !== id));
-                } else {
-                    setShareablePhotos(prev => prev.filter(p => p.id !== id));
+    const handleDeletePhoto = (id: number, type: 'periodismo' | 'galeria') => {
+        setModalConfig({
+            isOpen: true,
+            type: 'danger',
+            title: 'Eliminar Fotografía',
+            message: '¿Estás seguro de que deseas eliminar esta foto de tu catálogo? Esta acción no se puede deshacer.',
+            confirmText: 'Eliminar Foto',
+            cancelText: 'Cancelar',
+            showCancel: true,
+            onConfirm: async () => {
+                closeModal();
+                const endpoint = type === 'periodismo' ? `${API_BASE}/photojournalism-posts/${id}` : `${API_BASE}/shareable-photos/${id}`;
+                try {
+                    const res = await fetch(endpoint, { method: 'DELETE' });
+                    if (res.ok || res.status === 204) {
+                        if (type === 'periodismo') {
+                            setPhotoPosts(prev => prev.filter(p => p.id !== id));
+                        } else {
+                            setShareablePhotos(prev => prev.filter(p => p.id !== id));
+                        }
+                        if (onGalleriesUpdated) onGalleriesUpdated();
+                        showAlert('Fotografía Eliminada', 'La imagen ha sido eliminada exitosamente.', 'success');
+                    } else {
+                        const errData = await res.json().catch(() => ({}));
+                        showAlert('Error al Eliminar', errData.message || 'Error al eliminar la foto.', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error deleting photo:', error);
+                    showAlert('Error de Conexión', 'Error al intentar eliminar la foto.', 'warning');
                 }
-                if (onGalleriesUpdated) onGalleriesUpdated();
-            } else {
-                const errData = await res.json().catch(() => ({}));
-                alert(errData.message || 'Error al eliminar la foto.');
             }
-        } catch (error) {
-            console.error('Error deleting photo:', error);
-            alert('Error al intentar eliminar la foto.');
-        }
+        });
     };
 
     const renderPhotoList = () => {
@@ -337,18 +414,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-8 flex space-x-8">
                 <button
-                    onClick={() => {
-                        if (activeTab === 'periodismo') return;
-                        if (selectedFiles.length > 0) {
-                            if (!window.confirm('Tienes fotos pendientes por subir. ¿Deseas descartarlas y cambiar de sección?')) return;
-                        }
-                        setSelectedFiles([]);
-                        setBatchTitle('');
-                        setBatchCaption('');
-                        setBatchPrice('');
-                        setActiveTab('periodismo');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => handleTabSwitch('periodismo')}
                     className={`pb-4 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === 'periodismo'
                         ? 'text-primary border-b-2 border-primary'
                         : 'text-gray-400 hover:text-gray-600'
@@ -357,18 +423,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                     Foto-Periodismo
                 </button>
                 <button
-                    onClick={() => {
-                        if (activeTab === 'galeria') return;
-                        if (selectedFiles.length > 0) {
-                            if (!window.confirm('Tienes fotos pendientes por subir. ¿Deseas descartarlas y cambiar de sección?')) return;
-                        }
-                        setSelectedFiles([]);
-                        setBatchTitle('');
-                        setBatchCaption('');
-                        setBatchPrice('');
-                        setActiveTab('galeria');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => handleTabSwitch('galeria')}
                     className={`pb-4 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === 'galeria'
                         ? 'text-primary border-b-2 border-primary'
                         : 'text-gray-400 hover:text-gray-600'
@@ -392,7 +447,7 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                             <input
                                 type="file"
                                 multiple={activeTab === 'galeria'}
-                                accept="image/jpeg,image/png,image/jfif"
+                                accept="image/jpeg,image/png,image/jfif,image/webp"
                                 onChange={handleFileSelect}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 disabled={isUploading}
@@ -400,76 +455,17 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                             <PhotoIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-700 font-medium font-serif mb-1">Haz clic o arrastra tus fotos aquí</p>
                             <p className="text-sm text-gray-500">
-                                {activeTab === 'periodismo' ? '1 foto por reportaje (JPG, PNG, JFIF)' : 'Máximo 20 fotos por subida (JPG, PNG, JFIF)'}
+                                {activeTab === 'periodismo' ? '1 foto por reportaje (JPG, PNG, JFIF, WEBP)' : 'Máximo 20 fotos por subida (JPG, PNG, JFIF, WEBP)'}
                             </p>
-                                                    {/* Módulo de Hashtags Inteligentes con IA */}
-                        <div className="bg-orange-50/60 p-4 rounded-xl border border-orange-200/70 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <label className="flex items-center text-xs font-bold text-gray-700 uppercase tracking-wide">
-                                    <TagIcon className="w-4 h-4 mr-1.5 text-primary" />
-                                    Hashtags y Etiquetas Temáticas
-                                </label>
-                                {isAnalyzingImage && (
-                                    <span className="flex items-center text-xs font-semibold text-primary animate-pulse">
-                                        <SparklesIcon className="w-4 h-4 mr-1 animate-spin" />
-                                        Escaneando imagen con IA...
-                                    </span>
-                                )}
-                            </div>
 
-                            {/* Lista de Hashtags en formato Chips/Pills */}
-                            <div className="flex flex-wrap gap-1.5 min-h-[32px] items-center">
-                                {hashtags.length === 0 && !isAnalyzingImage && (
-                                    <span className="text-xs text-gray-500 italic">
-                                        Selecciona una foto arriba para que la IA sugiera hashtags automáticamente o escribe los tuyos abajo.
-                                    </span>
-                                )}
+                            {isAnalyzingImage && (
+                                <div className="mt-4 inline-flex items-center space-x-2 text-xs font-semibold text-primary bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200 shadow-sm animate-pulse">
+                                    <SparklesIcon className="w-4 h-4 text-primary animate-spin" />
+                                    <span>Escaneando imagen con IA y sugiriendo hashtags...</span>
+                                </div>
+                            )}
 
-                                {hashtags.map((tag, idx) => (
-                                    <span 
-                                        key={idx} 
-                                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white text-orange-900 border border-orange-200 shadow-sm"
-                                    >
-                                        {tag}
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveTag(tag)}
-                                            className="ml-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                                            title="Eliminar etiqueta"
-                                        >
-                                            <XMarkIcon className="w-3.5 h-3.5" />
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-
-                            {/* Input para que el usuario agregue sus propios hashtags */}
-                            <div className="flex gap-2 pt-1">
-                                <input
-                                    type="text"
-                                    value={customTagInput}
-                                    onChange={e => setCustomTagInput(e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            handleAddCustomTag();
-                                        }
-                                    }}
-                                    placeholder="Escribe tu propio hashtag (ej: #Valparaíso) y presiona Enter..."
-                                    className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={handleAddCustomTag}
-                                    className="inline-flex items-center px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-orange-600 transition-all shadow-sm"
-                                >
-                                    <PlusIcon className="w-3.5 h-3.5 mr-1" />
-                                    Añadir
-                                </button>
-                            </div>
-                        </div>
-
-                        {activeTab === 'galeria' && (
+                            {activeTab === 'galeria' && (
                                 <p className="mt-4 text-xs font-bold text-orange-600 bg-orange-50 inline-block px-3 py-1 rounded-full">
                                     Se aplicará marca de agua CiPress automáticamente
                                 </p>
@@ -523,10 +519,10 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
                                 Apóyate en la IA para redactar pies de fotos informativos, titular tus reportajes, ajustar el tono periodístico o traducir descripciones.
                             </p>
                             <div className="flex items-center space-x-2 text-[11px] text-gray-500 pt-1.5 border-t border-orange-200/60">
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/90 border border-orange-200 text-primary font-bold text-[10px] uppercase">
-                                    Próximamente
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[10px] uppercase">
+                                    ✓ Activo
                                 </span>
-                                <span className="text-gray-600">Análisis visual directo de fotos y sugerencia de etiquetas temáticas automáticas.</span>
+                                <span className="text-gray-600">Análisis visual con Gemini Vision y sugerencia automática de hashtags.</span>
                             </div>
                         </div>
 
@@ -703,6 +699,20 @@ export const MisGaleriasView: React.FC<MisGaleriasViewProps> = ({ user, onGaller
 
             {/* Listado de Fotos */}
             {renderPhotoList()}
+
+            {/* Modal de Alertas y Confirmaciones CiPress */}
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                cancelText={modalConfig.cancelText}
+                showCancel={modalConfig.showCancel}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={closeModal}
+                onClose={closeModal}
+            />
 
         </div>
     );

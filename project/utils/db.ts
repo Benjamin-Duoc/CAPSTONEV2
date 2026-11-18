@@ -501,9 +501,10 @@ export const savePartnerLogos = async (data: PartnerLogo[]) => { console.warn('d
 // --- Talent Profiles ---
 export const getTalentProfiles = async () => fetchList<TalentProfile>('/talent-profiles', initialData.talentProfiles);
 
-export const getMyTalentProfile = async (): Promise<TalentProfile | null> => {
+export const getMyTalentProfile = async (userId?: number): Promise<TalentProfile | null> => {
   try {
-    const response = await fetch(`${API_BASE}/talent-profiles/my`, { credentials: 'include' });
+    const url = userId ? `${API_BASE}/talent-profiles/my?user_id=${userId}` : `${API_BASE}/talent-profiles/my`;
+    const response = await fetch(url, { credentials: 'include' });
     if (!response.ok) return null;
     const data = await response.json();
     return data ? keysToCamel(data) : null;
@@ -520,7 +521,10 @@ export const saveMyTalentProfile = async (data: Partial<TalentProfile>): Promise
     body: JSON.stringify(keysToSnake(data)),
     credentials: 'include'
   });
-  if (!response.ok) throw new Error('Error al guardar el perfil');
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || err.message || 'Error al guardar el perfil en el servidor');
+  }
   const result = await response.json();
   return keysToCamel(result);
 };
@@ -529,6 +533,114 @@ export const createTalentProfile = async (item: Omit<TalentProfile, 'id'>) => cr
 export const updateTalentProfile = async (item: TalentProfile) => updateItem<TalentProfile>('/talent-profiles', item);
 export const deleteTalentProfile = async (id: number) => deleteItem('/talent-profiles', id);
 export const saveTalentProfiles = async (data: TalentProfile[]) => { console.warn('deprecated'); };
+
+export const auditTalentProfile = async (profileData: any): Promise<import('../types').TalentAuditResult | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/audit-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(keysToSnake(profileData)),
+      credentials: 'include'
+    });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return res.data ? keysToCamel(res.data) : null;
+  } catch (error) {
+    console.error('Error al auditar perfil con IA:', error);
+    return null;
+  }
+};
+
+export const suggestTalentTitles = async (skills: string[], currentTitle?: string): Promise<string[]> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/suggest-titles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skills, current_title: currentTitle }),
+      credentials: 'include'
+    });
+    if (!response.ok) return [];
+    const res = await response.json();
+    return res.titles || [];
+  } catch (error) {
+    console.error('Error al sugerir títulos:', error);
+    return [];
+  }
+};
+
+export const runMatchmaking = async (collaboration: any): Promise<import('../types').MatchmakingResult | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/matchmaking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collaboration: keysToSnake(collaboration) }),
+      credentials: 'include'
+    });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return keysToCamel(res);
+  } catch (error) {
+    console.error('Error en matchmaking con IA:', error);
+    return null;
+  }
+};
+
+export const runJobToTalentsMatchmaking = async (job: any): Promise<import('../types').JobTalentMatchResult | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/matchmaking/job-to-talents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job: keysToSnake(job) }),
+      credentials: 'include'
+    });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return keysToCamel(res);
+  } catch (error) {
+    console.error('Error en matchmaking job-to-talents con IA:', error);
+    return null;
+  }
+};
+
+export const runTalentToJobsMatchmaking = async (talentProfile: any, jobs: any[]): Promise<import('../types').TalentJobMatchResult | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/matchmaking/talent-to-jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        talent_profile: keysToSnake(talentProfile),
+        jobs: (jobs || []).map(keysToSnake)
+      }),
+      credentials: 'include'
+    });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return keysToCamel(res);
+  } catch (error) {
+    console.error('Error en matchmaking talent-to-jobs con IA:', error);
+    return null;
+  }
+};
+
+export const runTalentToCollaborationsMatchmaking = async (talentProfile: any, collaborations: any[]): Promise<import('../types').TalentCollabMatchResult | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/matchmaking/talent-to-collaborations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        talent_profile: keysToSnake(talentProfile),
+        collaborations: (collaborations || []).map(keysToSnake)
+      }),
+      credentials: 'include'
+    });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return keysToCamel(res);
+  } catch (error) {
+    console.error('Error en matchmaking talent-to-collaborations con IA:', error);
+    return null;
+  }
+};
 
 // --- Rotation Interval (Config) ---
 export const getRotationInterval = async (): Promise<number> => {

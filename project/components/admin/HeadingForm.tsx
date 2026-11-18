@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { HeroHeading } from '../../types';
 import { uploadImage } from '../../utils/db';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 
 interface HeadingFormProps {
     currentHeading: HeroHeading;
@@ -11,6 +12,30 @@ interface HeadingFormProps {
 const HeadingForm: React.FC<HeadingFormProps> = ({ currentHeading, onSave, onClose }) => {
     const [formData, setFormData] = useState<HeroHeading>(currentHeading);
     const [isUploading, setIsUploading] = useState(false);
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'warning') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     useEffect(() => {
         setFormData(currentHeading);
@@ -30,11 +55,11 @@ const HeadingForm: React.FC<HeadingFormProps> = ({ currentHeading, onSave, onClo
                 if (res.success && res.url) {
                     setFormData(prev => ({ ...prev, imageUrl: res.url }));
                 } else {
-                    alert(res.message || 'Error al subir la imagen');
+                    showAlert('Error al Subir Imagen', res.message || 'Error al subir la imagen', 'warning');
                 }
             } catch (err) {
                 console.error("Upload failed", err);
-                alert("Error al conectar con el servidor de subida");
+                showAlert('Error de Conexión', "Error al conectar con el servidor de subida", 'danger');
             } finally {
                 setIsUploading(false);
             }
@@ -182,6 +207,16 @@ const HeadingForm: React.FC<HeadingFormProps> = ({ currentHeading, onSave, onClo
                     </div>
                 </form>
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

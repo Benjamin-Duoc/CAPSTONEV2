@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 // Importamos los tipos
 import { NewsArticle } from '../../types';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 
 interface NewsManagerProps {
   articles: NewsArticle[];
-  onAddArticle: (article: Omit<NewsArticle, 'id'>) => void;
+  onAddArticle: (article: Omit<NewsArticle, 'id'>) => Promise<any> | void;
   onDeleteArticle: (id: number) => void;
 }
 
@@ -20,6 +21,31 @@ export const NewsManager: React.FC<NewsManagerProps> = ({ articles, onAddArticle
     summary: '',
   });
 
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    type?: CiPressModalType;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const showAlert = (title: string, message: string, type: CiPressModalType = 'success') => {
+    setModalConfig({
+      isOpen: true,
+      type,
+      title,
+      message,
+      confirmText: 'Entendido',
+      onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+    });
+  };
+
   // --- FUNCIONES ---
 
   const handleDelete = (id: number) => {
@@ -31,7 +57,7 @@ export const NewsManager: React.FC<NewsManagerProps> = ({ articles, onAddArticle
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Creamos la noticia nueva (sin ID, el padre lo asigna)
@@ -45,20 +71,24 @@ export const NewsManager: React.FC<NewsManagerProps> = ({ articles, onAddArticle
       reportContent: [] // Array vacío por ahora
     };
 
-    // Llamamos al prop para agregar
-    onAddArticle(newArticle);
+    try {
+      // Llamamos al prop para agregar y esperamos confirmación
+      await onAddArticle(newArticle);
 
-    alert('¡Noticia creada correctamente!');
+      showAlert('Noticia Creada', '¡La noticia ha sido creada correctamente en CiPress!', 'success');
 
-    // Limpiamos el formulario
-    setFormData({
-      title: '',
-      category: 'Tecnología',
-      author: '',
-      date: new Date().toLocaleDateString('es-CL'),
-      imageUrl: '',
-      summary: '',
-    });
+      // Limpiamos el formulario
+      setFormData({
+        title: '',
+        category: 'Tecnología',
+        author: '',
+        date: new Date().toLocaleDateString('es-CL'),
+        imageUrl: '',
+        summary: '',
+      });
+    } catch (error) {
+      // Si falla en App.tsx ya se muestra el modal de error y evitamos mostrar alerta falsa de éxito
+    }
   };
 
   // --- VISTA (HTML/JSX) ---
@@ -129,6 +159,16 @@ export const NewsManager: React.FC<NewsManagerProps> = ({ articles, onAddArticle
           ))}
         </div>
       </div>
+
+      <CiPressModal
+        isOpen={modalConfig.isOpen}
+        type={modalConfig.type}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

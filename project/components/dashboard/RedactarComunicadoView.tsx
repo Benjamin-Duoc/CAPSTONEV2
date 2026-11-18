@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { User, PressRelease } from '../../types';
 import PressReleaseForm from '../admin/PressReleaseForm';
 import { PlusIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
+import CiPressModal, { CiPressModalType } from '../common/CiPressModal';
 
 interface RedactarComunicadoViewProps {
     currentUser: User;
@@ -19,29 +20,65 @@ const RedactarComunicadoView: React.FC<RedactarComunicadoViewProps> = ({
     const [activeTab, setActiveTab] = useState<'lista' | 'editor'>('lista');
     const [editingRelease, setEditingRelease] = useState<PressRelease | null>(null);
 
+    // Estado del modal institucional según AGENTS.md
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        cancelText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
+
     const handleSave = async (data: PressRelease | Omit<PressRelease, 'id'>) => {
         try {
             await onSavePressRelease(data);
             setActiveTab('lista');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setEditingRelease(null);
-            alert('¡Comunicado guardado exitosamente!');
+            showAlert('¡Comunicado Guardado!', 'El comunicado de prensa ha sido publicado exitosamente.', 'success');
         } catch (error) {
             console.error(error);
-            alert('Hubo un error al guardar el comunicado.');
+            showAlert('Error al Guardar', 'Hubo un error al intentar guardar el comunicado. Inténtalo nuevamente.', 'warning');
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm("¿Estás seguro de que deseas eliminar este comunicado? Esta acción no se puede deshacer.")) {
-            try {
-                await onDeletePressRelease(id);
-                alert("Comunicado eliminado exitosamente.");
-            } catch (error) {
-                console.error(error);
-                alert("Hubo un error al eliminar el comunicado.");
+    const handleDelete = (id: number) => {
+        setModalConfig({
+            isOpen: true,
+            type: 'danger',
+            title: '¿Eliminar Comunicado?',
+            message: '¿Estás seguro de que deseas eliminar este comunicado? Esta acción no se puede deshacer.',
+            confirmText: 'Eliminar Comunicado',
+            cancelText: 'Cancelar',
+            onConfirm: async () => {
+                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                try {
+                    await onDeletePressRelease(id);
+                    showAlert('Comunicado Eliminado', 'El comunicado ha sido eliminado exitosamente.', 'success');
+                } catch (error) {
+                    console.error("Error al eliminar comunicado:", error);
+                    showAlert('Error al Eliminar', 'Hubo un error en el servidor al intentar eliminar el comunicado.', 'danger');
+                }
             }
-        }
+        });
     };
 
     const handleCreateNew = () => {
@@ -192,6 +229,18 @@ const RedactarComunicadoView: React.FC<RedactarComunicadoViewProps> = ({
                     </div>
                 )}
             </div>
+
+            {/* Modal institucional según AGENTS.md */}
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                cancelText={modalConfig.cancelText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

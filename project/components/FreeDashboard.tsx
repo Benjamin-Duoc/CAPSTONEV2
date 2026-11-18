@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User, PressRelease, TalentProfile } from '../types';
 import PressReleaseForm from './admin/PressReleaseForm';
 import TalentProfileForm from './admin/TalentProfileForm';
+import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 import { ArrowLeftOnRectangleIcon, UserIcon, DocumentTextIcon, CreditCardIcon, CheckIcon, StarIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { getMyTalentProfile, saveMyTalentProfile, initiatePayment, getApiUrl } from '../utils/db';
 
@@ -32,6 +33,31 @@ const FreeDashboard: React.FC<FreeDashboardProps> = ({
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
     const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
 
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
+
     useEffect(() => {
         const loadProfile = async () => {
             setIsLoadingProfile(true);
@@ -46,9 +72,9 @@ const FreeDashboard: React.FC<FreeDashboardProps> = ({
         try {
             const saved = await saveMyTalentProfile(data);
             setMyProfile(saved);
-            alert("¡Perfil de talento actualizado con éxito!");
+            showAlert("Perfil Guardado", "¡Perfil de talento actualizado con éxito!", "success");
         } catch (error) {
-            alert("Error al guardar el perfil.");
+            showAlert("Error al Guardar", "Error al intentar guardar el perfil de talento.", "danger");
         }
     };
 
@@ -69,12 +95,12 @@ const FreeDashboard: React.FC<FreeDashboardProps> = ({
                 window.location.href = data.payment_url || data.url;
             } else {
                 // Atrapamos el error (ej: 400 de Sandbox) y mostramos el mensaje amigable
-                alert("Atención: " + (data.message || "Ocurrió un problema al generar el cobro."));
+                showAlert("Proceso de Pago", "Atención: " + (data.message || "Ocurrió un problema al generar el cobro."), "warning");
                 setIsProcessingUpgrade(false);
             }
         } catch (error) {
             console.error("Error crítico en el pago:", error);
-            alert("Error de conexión. Por favor, revisa tu internet o intenta más tarde.");
+            showAlert("Error de Conexión", "Error de conexión. Por favor, revisa tu conexión a internet o intenta más tarde.", "danger");
             setIsProcessingUpgrade(false);
         }
     };
@@ -188,8 +214,17 @@ const FreeDashboard: React.FC<FreeDashboardProps> = ({
                                                 onSave={async (data) => {
                                                     const success = await onAddPressRelease(data);
                                                     if (success) {
-                                                        alert("¡Comunicado subido con éxito! Pasará a la rotación gratuita.");
-                                                        window.location.reload();
+                                                        setModalConfig({
+                                                            isOpen: true,
+                                                            type: 'success',
+                                                            title: 'Comunicado Enviado',
+                                                            message: '¡Comunicado subido con éxito! Pasará a la rotación gratuita de CiPress.',
+                                                            confirmText: 'Aceptar',
+                                                            onConfirm: () => {
+                                                                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                                                                window.location.reload();
+                                                            }
+                                                        });
                                                     }
                                                 }}
                                                 onClose={() => {
@@ -349,6 +384,16 @@ const FreeDashboard: React.FC<FreeDashboardProps> = ({
                     ) : null}
                 </div>
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

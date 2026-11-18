@@ -4,6 +4,7 @@ import type { PhotojournalismPost, User } from '../types';
 import { WhatsAppIcon } from './icons';
 import { getPhotojournalismPosts as getPhotoPosts, createPhotojournalismPost as insertPhotoPost, updatePhotojournalismPost as updatePhotoPost, uploadImage, deletePhotojournalismPost as deletePhotoPost } from '../utils/db';
 import AIWritingAssistant from './ai/AIWritingAssistant';
+import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 
 interface PhotojournalismModuleProps {
     posts?: PhotojournalismPost[];
@@ -79,6 +80,31 @@ const PhotojournalismModule: React.FC<PhotojournalismModuleProps> = ({ posts = [
     const [dbPosts, setDbPosts] = useState<PhotojournalismPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingPost, setEditingPost] = useState<PhotojournalismPost | null>(null);
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        cancelText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     // Search & Filter State
     const [searchTerm, setSearchTerm] = useState('');
@@ -167,17 +193,27 @@ const PhotojournalismModule: React.FC<PhotojournalismModuleProps> = ({ posts = [
         setIsPhotojournalismModalOpen(true);
     }
 
-    const handleDeletePost = async (post: PhotojournalismPost) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.')) {
-            try {
-                await deletePhotoPost(post.id);
-                setDbPosts(prev => prev.filter(p => p.id !== post.id));
-            } catch (err) {
-                console.error(err);
-                alert('Error al eliminar la publicación.');
+    const handleDeletePost = (post: PhotojournalismPost) => {
+        setModalConfig({
+            isOpen: true,
+            type: 'danger',
+            title: '¿Eliminar Publicación?',
+            message: '¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer.',
+            confirmText: 'Eliminar Publicación',
+            cancelText: 'Cancelar',
+            onConfirm: async () => {
+                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                try {
+                    await deletePhotoPost(post.id);
+                    setDbPosts(prev => prev.filter(p => p.id !== post.id));
+                    showAlert('Publicación Eliminada', 'La publicación ha sido eliminada exitosamente.', 'success');
+                } catch (err) {
+                    console.error(err);
+                    showAlert('Error al Eliminar', 'Error al intentar eliminar la publicación.', 'danger');
+                }
             }
-        }
-    }
+        });
+    };
 
     const PhotojournalismPublicationModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const [uploadForm, setUploadForm] = useState({
@@ -508,6 +544,17 @@ const PhotojournalismModule: React.FC<PhotojournalismModuleProps> = ({ posts = [
                 )}
             </div>
             {isPhotojournalismModalOpen && <PhotojournalismPublicationModal onClose={handleModalClose} />}
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                cancelText={modalConfig.cancelText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

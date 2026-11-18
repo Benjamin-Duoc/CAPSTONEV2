@@ -7,6 +7,7 @@ import UserPressReleaseForm from './UserPressReleaseForm';
 import UserSpecialistForm from './UserSpecialistForm';
 import { EntrepreneurshipCard } from './EntrepreneurshipCard';
 import { CourseCard } from './CoursesModule';
+import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 
 interface HomePageProps {
     onNavigate: (page: Page, subPage?: string) => void;
@@ -665,6 +666,31 @@ const HomePage: React.FC<HomePageProps> = (props) => {
     const [isLoginGuardOpen, setIsLoginGuardOpen] = useState(false);
     const [loginGuardRedirect, setLoginGuardRedirect] = useState<string | null>(null);
 
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
+
     // Featured Content (Time-based strict rotation from Backend)
     const [featuredPressReleases, setFeaturedPressReleases] = useState<PressRelease[]>([]);
 
@@ -717,19 +743,26 @@ const HomePage: React.FC<HomePageProps> = (props) => {
         onNavigate('dashboard', 'specialist');
     };
 
-    const handlePressReleaseSubmit = (pr: Omit<PressRelease, 'id'>) => {
+    const handlePressReleaseSubmit = async (pr: Omit<PressRelease, 'id'>) => {
         if (onAddPressRelease) {
-            onAddPressRelease(pr);
+            const success = await onAddPressRelease(pr);
+            if (success) {
+                showAlert('Comunicado Enviado', '¡Tu comunicado ha sido enviado con éxito a CiPress!', 'success');
+                setIsPressReleaseModalOpen(false);
+            }
         }
-        setIsPressReleaseModalOpen(false);
     };
 
-    const handleSpecialistSubmit = (specialist: Omit<Specialist, 'id' | 'dateAdded'>) => {
+    const handleSpecialistSubmit = async (specialist: Omit<Specialist, 'id' | 'dateAdded'>) => {
         if (onAddSpecialist) {
-            onAddSpecialist(specialist);
-            alert('¡Fuente especializada agregada exitosamente!');
+            try {
+                await onAddSpecialist(specialist);
+                showAlert('Fuente Especializada Agregada', '¡Fuente especializada agregada exitosamente a CiPress!', 'success');
+                setIsSourceFormOpen(false);
+            } catch (error) {
+                showAlert('Error al Guardar', 'Hubo un error al intentar agregar la fuente especializada.', 'danger');
+            }
         }
-        setIsSourceFormOpen(false);
     };
 
     const iconMap: { [key in SiteStat['id']]: React.ReactNode } = {
@@ -1565,6 +1598,16 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                     </div>
                 </div>
             )}
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div >
     );
 };

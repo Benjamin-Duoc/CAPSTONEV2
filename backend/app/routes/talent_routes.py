@@ -39,7 +39,8 @@ def get_all_profiles():
 
 @talent_bp.route('/my', methods=['GET'])
 def get_my_profile():
-    user_id = session.get('user_id')
+    # Obtener user_id desde sesión o query param (fallback para recargas)
+    user_id = session.get('user_id') or request.args.get('user_id', type=int)
     if not user_id:
         return jsonify({"error": "No hay sesión activa"}), 401
     
@@ -56,35 +57,40 @@ def get_my_profile():
 
 @talent_bp.route('/my', methods=['POST'])
 def save_my_profile():
-    user_id = session.get('user_id')
+    data = request.get_json() or {}
+    # Obtener user_id desde sesión activa o desde el cuerpo de la petición
+    user_id = session.get('user_id') or data.get('user_id')
     if not user_id:
-        return jsonify({"error": "No hay sesión activa"}), 401
+        return jsonify({"error": "No hay sesión activa de usuario"}), 401
     
-    data = request.get_json()
     profile = TalentProfile.query.filter_by(user_id=user_id).first()
     
     try:
+        # Limpiar atributos no persistibles o protegidos
+        data.pop('id', None)
+        data.pop('is_premium', None)
+        data.pop('isPremium', None)
+        data.pop('created_at', None)
+
         if profile:
-            # Update existing
-            # We don't want to allow updating user_id via this endpoint for security
+            # Actualizar existente
             data.pop('user_id', None)
-            data.pop('id', None)
             profile = profile_schema.load(data, instance=profile, session=db.session, partial=True)
         else:
-            # Create new
+            # Crear nuevo perfil vinculado
             data['user_id'] = user_id
             profile = profile_schema.load(data, session=db.session)
             db.session.add(profile)
             
         db.session.commit()
         
-        # Return enriched data
+        # Devolver perfil enriquecido
         res_data = profile_schema.dump(profile)
         user = User.query.get(user_id)
         res_data['isPremium'] = (user.role == 'Colaborador Premium') if user else False
         
         return jsonify(res_data), 200
     except Exception as e:
-        print("MARSHMALLOW ERROR ON TALENT PROFILE:", str(e), "Payload was:", data)
+        print("ERROR GUARDANDO TALENT PROFILE:", str(e), "Payload:", data)
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error al procesar los datos: {str(e)}"}), 400

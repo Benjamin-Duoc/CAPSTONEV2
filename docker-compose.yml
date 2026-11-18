@@ -1,3 +1,5 @@
+name: capstone-cipress
+
 services:
   backend:
     build:

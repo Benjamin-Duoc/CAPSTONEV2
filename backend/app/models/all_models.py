@@ -370,6 +370,7 @@ class TalentProfile(db.Model):
     region = db.Column(db.String)
     linkedin_url = db.Column(db.String)
     experience_years = db.Column(db.Integer)
+    bio = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Specialist(db.Model):

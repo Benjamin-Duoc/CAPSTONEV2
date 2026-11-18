@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Page, CommunityPost, User } from '../types';
 import { ArrowUpRightIcon } from './icons';
+import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 
 interface CommunityPostPageProps {
     posts: CommunityPost[];
@@ -68,6 +69,30 @@ const CommunityPostPage: React.FC<CommunityPostPageProps> = ({ posts, onAddPost,
     const [editPostUrl, setEditPostUrl] = useState('');
     const [editComment, setEditComment] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
+
+    const showAlert = (title: string, message: string, type: CiPressModalType = 'warning') => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            confirmText: 'Entendido',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+    };
 
     const ITEMS_PER_PAGE = 12;
 
@@ -115,7 +140,7 @@ const CommunityPostPage: React.FC<CommunityPostPageProps> = ({ posts, onAddPost,
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!postTitle.trim() || !postUrl.trim() || !comment.trim()) {
-            alert('Por favor, completa todos los campos.');
+            showAlert('Campos Incompletos', 'Por favor, completa todos los campos requeridos antes de publicar.', 'warning');
             return;
         }
 
@@ -152,7 +177,7 @@ const CommunityPostPage: React.FC<CommunityPostPageProps> = ({ posts, onAddPost,
         e.preventDefault();
         if (!editingPost) return;
         if (!editPostTitle.trim() || !editPostUrl.trim() || !editComment.trim()) {
-            alert('Por favor, completa todos los campos.');
+            showAlert('Campos Incompletos', 'Por favor, completa todos los campos requeridos antes de guardar los cambios.', 'warning');
             return;
         }
 
@@ -383,6 +408,16 @@ const CommunityPostPage: React.FC<CommunityPostPageProps> = ({ posts, onAddPost,
                 )}
 
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

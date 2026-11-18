@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import UserPressReleaseForm from './UserPressReleaseForm';
 import type { PressRelease, Page, User } from '../types';
+import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 
 interface PressReleaseUploadPageProps {
     onNavigate: (page: Page) => void;
@@ -9,12 +10,34 @@ interface PressReleaseUploadPageProps {
 }
 
 const PressReleaseUploadPage: React.FC<PressReleaseUploadPageProps> = ({ onNavigate, onAddPressRelease, currentUser }) => {
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        type?: CiPressModalType;
+        title: string;
+        message: string;
+        confirmText?: string;
+        onConfirm: () => void;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {}
+    });
 
     const handleSave = async (pr: Omit<PressRelease, 'id'>) => {
         const success = await onAddPressRelease(pr);
         if (success) {
-            alert('¡Comunicado enviado con éxito! Estará visible pendiente de aprobación.');
-            onNavigate('home');
+            setModalConfig({
+                isOpen: true,
+                type: 'success',
+                title: 'Comunicado Enviado',
+                message: '¡Comunicado enviado con éxito! Estará visible pendiente de aprobación por el equipo editorial de CiPress.',
+                confirmText: 'Ir al Inicio',
+                onConfirm: () => {
+                    setModalConfig(prev => ({ ...prev, isOpen: false }));
+                    onNavigate('home');
+                }
+            });
         }
     };
 
@@ -71,6 +94,16 @@ const PressReleaseUploadPage: React.FC<PressReleaseUploadPageProps> = ({ onNavig
                     </button>
                 </div>
             </div>
+
+            <CiPressModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };
