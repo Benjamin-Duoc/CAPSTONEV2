@@ -108,6 +108,8 @@ class JobSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Job
         load_instance = True
+        include_fk = True
+        unknown = 'exclude'
 
 class FreelanceServiceSchema(ma.SQLAlchemyAutoSchema):
     class Meta:

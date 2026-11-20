@@ -52,6 +52,8 @@ export interface DestacadoArticle {
 
 export interface Job {
     id: number;
+    userId?: number;
+    authorUserId?: number;
     title: string;
     company: string;
     location: string;
@@ -61,6 +63,7 @@ export interface Job {
     logoUrl: string;
     description: string;
     applyEmail: string;
+    createdAt?: string;
 }
 
 export interface Entrepreneurship {

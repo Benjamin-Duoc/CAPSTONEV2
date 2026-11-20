@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { User, PremiumSponsor, PressRelease, ShortCollaboration, Specialist, FreelanceService } from '../types';
+import type { User, PremiumSponsor, PressRelease, ShortCollaboration, Specialist, FreelanceService, Job } from '../types';
 import { initiatePayment } from '../utils/db';
 import MyProfileView from './dashboard/MyProfileView';
 import ConfianEnCipressView from './dashboard/ConfianEnCipressView';
@@ -10,6 +10,7 @@ import TalentProfileView from './dashboard/TalentProfileView';
 import UrgentCollaborationsView from './dashboard/UrgentCollaborationsView';
 import MisFuentesEspecializadasView from './dashboard/MisFuentesEspecializadasView';
 import MisServiciosFreelanceView from './dashboard/MisServiciosFreelanceView';
+import PublicarOfertaLaboralView from './dashboard/PublicarOfertaLaboralView';
 import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 import { 
     UserIcon, 
@@ -50,6 +51,10 @@ interface UserDashboardProps {
     onAddFreelanceService?: (service: Omit<FreelanceService, 'id'>) => Promise<FreelanceService>;
     onUpdateFreelanceService?: (service: FreelanceService) => Promise<FreelanceService>;
     onDeleteFreelanceService?: (id: number) => Promise<void>;
+    jobs?: Job[];
+    onAddJob?: (job: Omit<Job, 'id'>) => Promise<Job>;
+    onUpdateJob?: (job: Job) => Promise<Job>;
+    onDeleteJob?: (id: number) => Promise<void>;
     users?: User[];
     initialSection?: MenuSection;
 }
@@ -88,6 +93,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
     shortCollaborations, onAddShortCollaboration, onUpdateShortCollaboration, onDeleteShortCollaboration,
     specialists, onAddSpecialist, onUpdateSpecialist, onDeleteSpecialist,
     freelanceServices, onAddFreelanceService, onUpdateFreelanceService, onDeleteFreelanceService,
+    jobs, onAddJob, onUpdateJob, onDeleteJob,
     users, initialSection = 'Mi Perfil'
 }) => {
     const [activeSection, setActiveSection] = useState<MenuSection>(initialSection);
@@ -357,22 +363,22 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                     />
                 ) : <div className="p-8 text-center text-gray-500 font-medium">Cargando...</div>;
             case 'Publicar Oferta Laboral':
-                return (
-                    <div className="p-6 md:p-12 max-w-4xl mx-auto animate-fade-in">
-                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-12 text-center relative overflow-hidden">
-                            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-primary border border-orange-100">
-                                <BriefcaseIcon className="h-8 w-8 text-primary" />
-                            </div>
-                            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-100/70 text-orange-800 border border-orange-200 mb-3">
-                                🛠️ Próximamente • Módulo en Construcción
-                            </div>
-                            <h3 className="text-2xl font-bold font-serif text-gray-900 mb-2">Publicar Oferta Laboral</h3>
-                            <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
-                                Las empresas y medios podrán publicar convocatorias de empleo, pasantías y asignaciones especiales, recibiendo postulaciones directas desde el Banco de Talentos.
-                            </p>
-                        </div>
-                    </div>
-                );
+                return currentUser ? (
+                    <PublicarOfertaLaboralView
+                        currentUser={currentUser}
+                        jobs={jobs || []}
+                        onSave={async (data) => {
+                            if ('id' in data && data.id) {
+                                if (onUpdateJob) await onUpdateJob(data as Job);
+                            } else {
+                                if (onAddJob) await onAddJob(data as Omit<Job, 'id'>);
+                            }
+                        }}
+                        onDelete={async (id) => {
+                            if (onDeleteJob) await onDeleteJob(id);
+                        }}
+                    />
+                ) : <div className="p-8 text-center text-gray-500 font-medium">Cargando...</div>;
             default:
                 return null;
         }

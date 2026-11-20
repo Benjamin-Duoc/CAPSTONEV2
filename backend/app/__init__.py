@@ -66,8 +66,52 @@ def create_app(config_class=None):
                         conn.execute(text("ALTER TABLE freelance_services ADD COLUMN email VARCHAR"))
                     if 'created_at' not in cols:
                         conn.execute(text("ALTER TABLE freelance_services ADD COLUMN created_at DATETIME"))
+
+                    # Reconciliación automática de registros huérfanos preexistentes (Docker y Local)
+                    conn.execute(text("UPDATE freelance_services SET user_id = 4 WHERE user_id IS NULL AND (email = 'premium@colab.com' OR provider LIKE '%Juan%' OR service LIKE '%Investigación%')"))
+                    conn.execute(text("UPDATE freelance_services SET user_id = 5 WHERE user_id IS NULL AND (email = 'gratis@colab.com' OR provider LIKE '%Pedro%' OR service LIKE '%Prensa%')"))
+                    conn.execute(text("UPDATE freelance_services SET user_id = 6 WHERE user_id IS NULL AND (email = 'gaby@gratis.cl' OR provider LIKE '%Gaby%' OR service LIKE '%Fotoperiodismo%')"))
+                    conn.execute(text("UPDATE freelance_services SET user_id = 1 WHERE user_id IS NULL AND (email = 'ana@administrador.cl' OR provider LIKE '%Ana%' OR service LIKE '%Corrección%')"))
                     conn.commit()
                 app.logger.info("Migración automática: Columnas verificadas para freelance_services")
+
+            if 'jobs' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('jobs')]
+                with db.engine.connect() as conn:
+                    if 'user_id' not in cols:
+                        conn.execute(text("ALTER TABLE jobs ADD COLUMN user_id INTEGER REFERENCES usuario(id)"))
+                    if 'created_at' not in cols:
+                        conn.execute(text("ALTER TABLE jobs ADD COLUMN created_at DATETIME"))
+
+                    # Reconciliación automática de ofertas laborales huérfanas preexistentes (Docker y Local)
+                    conn.execute(text("UPDATE jobs SET user_id = 3 WHERE user_id IS NULL AND (apply_email = 'ely@empresa.cl' OR id IN (1, 2, 3, 5))"))
+                    conn.execute(text("UPDATE jobs SET user_id = 1 WHERE user_id IS NULL AND (apply_email = 'ana@administrador.cl' OR id = 7)"))
+                    conn.commit()
+                app.logger.info("Migración automática: Columnas verificadas para jobs")
+
+            if 'specialists' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('specialists')]
+                with db.engine.connect() as conn:
+                    if 'user_id' not in cols:
+                        conn.execute(text("ALTER TABLE specialists ADD COLUMN user_id INTEGER REFERENCES usuario(id)"))
+                    if 'institution' not in cols:
+                        conn.execute(text("ALTER TABLE specialists ADD COLUMN institution VARCHAR"))
+                    if 'category' not in cols:
+                        conn.execute(text("ALTER TABLE specialists ADD COLUMN category VARCHAR"))
+                    if 'coverage_notes' not in cols:
+                        conn.execute(text("ALTER TABLE specialists ADD COLUMN coverage_notes TEXT"))
+                    if 'reliability_level' not in cols:
+                        conn.execute(text("ALTER TABLE specialists ADD COLUMN reliability_level VARCHAR"))
+                    if 'is_public' not in cols:
+                        conn.execute(text("ALTER TABLE specialists ADD COLUMN is_public BOOLEAN DEFAULT 1"))
+
+                    # Reconciliación automática de fuentes huérfanas preexistentes
+                    conn.execute(text("UPDATE specialists SET user_id = 1 WHERE user_id IS NULL AND id IN (1, 2)"))
+                    conn.execute(text("UPDATE specialists SET user_id = 3 WHERE user_id IS NULL AND id = 3"))
+                    conn.execute(text("UPDATE specialists SET user_id = 4 WHERE user_id IS NULL AND id = 4"))
+                    conn.execute(text("UPDATE specialists SET user_id = 5 WHERE user_id IS NULL AND id = 5"))
+                    conn.commit()
+                app.logger.info("Migración automática: Columnas verificadas para specialists")
         except Exception as e:
             app.logger.warning(f"Aviso de compatibilidad de esquema: {e}")
 

@@ -481,18 +481,30 @@ const App: React.FC = () => {
   };
 
   // Jobs
+  const executeAddJob = async (item: Omit<Job, 'id'>): Promise<Job> => {
+    const res = await createJob(item);
+    setJobs(prev => [res, ...prev]);
+    return res;
+  };
+  const executeUpdateJob = async (item: Job): Promise<Job> => {
+    const res = await updateJob(item);
+    setJobs(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
+  const executeDeleteJob = async (id: number): Promise<void> => {
+    await deleteJob(id);
+    setJobs(prev => prev.filter(i => i.id !== id));
+  };
   const handleAddJob = async (item: Omit<Job, 'id'>) => {
     try {
-      const res = await createJob(item);
-      setJobs(prev => [...prev, res]);
+      await executeAddJob(item);
     } catch (e) {
       showAppAlert("Error", "Error al crear la oferta laboral.", "danger");
     }
   };
   const handleUpdateJob = async (item: Job) => {
     try {
-      const res = await updateJob(item);
-      setJobs(prev => prev.map(i => i.id === res.id ? res : i));
+      await executeUpdateJob(item);
     } catch (e) {
       showAppAlert("Error", "Error al actualizar la oferta laboral.", "danger");
     }
@@ -500,8 +512,7 @@ const App: React.FC = () => {
   const handleDeleteJob = (id: number) => {
     showAppConfirm('¿Eliminar Oferta?', '¿Estás seguro de que deseas eliminar esta oferta laboral?', async () => {
       try {
-        await deleteJob(id);
-        setJobs(prev => prev.filter(i => i.id !== id));
+        await executeDeleteJob(id);
       } catch (e) {
         showAppAlert("Error", "Error al eliminar la oferta laboral.", "danger");
       }
@@ -1291,6 +1302,10 @@ const App: React.FC = () => {
              onAddFreelanceService={executeAddFreelanceService}
              onUpdateFreelanceService={executeUpdateFreelanceService}
              onDeleteFreelanceService={executeDeleteFreelanceService}
+             jobs={jobs}
+             onAddJob={executeAddJob}
+             onUpdateJob={executeUpdateJob}
+             onDeleteJob={executeDeleteJob}
              users={users}
              initialSection={
                initialTab === 'talent' ? 'Mi Perfil de Talento' : 
@@ -1302,6 +1317,7 @@ const App: React.FC = () => {
                initialTab === 'specialist' ? 'Mis Fuentes Especializadas' :
                initialTab === 'urgentes' ? 'Colaboraciones Urgentes' :
                initialTab === 'freelance' ? 'Mis Servicios Freelance' :
+               initialTab === 'jobs' || initialTab === 'ofertas' ? 'Publicar Oferta Laboral' :
                'Mi Perfil'
              }
            />;

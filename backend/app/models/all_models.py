@@ -237,6 +237,7 @@ class FundingOpportunity(db.Model):
 class Job(db.Model):
     __tablename__ = 'jobs'
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True) # Empresa o Administrador que publica
     title = db.Column(db.String)
     company = db.Column(db.String)
     location = db.Column(db.String)
