@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { User, PremiumSponsor, PressRelease, ShortCollaboration, Specialist } from '../types';
+import type { User, PremiumSponsor, PressRelease, ShortCollaboration, Specialist, FreelanceService } from '../types';
 import { initiatePayment } from '../utils/db';
 import MyProfileView from './dashboard/MyProfileView';
 import ConfianEnCipressView from './dashboard/ConfianEnCipressView';
@@ -9,6 +9,7 @@ import MisPymesView from './dashboard/MisPymesView';
 import TalentProfileView from './dashboard/TalentProfileView';
 import UrgentCollaborationsView from './dashboard/UrgentCollaborationsView';
 import MisFuentesEspecializadasView from './dashboard/MisFuentesEspecializadasView';
+import MisServiciosFreelanceView from './dashboard/MisServiciosFreelanceView';
 import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 import { 
     UserIcon, 
@@ -45,6 +46,10 @@ interface UserDashboardProps {
     onAddSpecialist?: (specialist: Omit<Specialist, 'id' | 'dateAdded'>) => Promise<Specialist>;
     onUpdateSpecialist?: (specialist: Specialist) => Promise<Specialist>;
     onDeleteSpecialist?: (id: number) => Promise<void>;
+    freelanceServices?: FreelanceService[];
+    onAddFreelanceService?: (service: Omit<FreelanceService, 'id'>) => Promise<FreelanceService>;
+    onUpdateFreelanceService?: (service: FreelanceService) => Promise<FreelanceService>;
+    onDeleteFreelanceService?: (id: number) => Promise<void>;
     users?: User[];
     initialSection?: MenuSection;
 }
@@ -67,13 +72,13 @@ const MENU_ITEMS: MenuItem[] = [
     { name: 'Colaboraciones Urgentes', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: ['colaborador gratis', 'colaborador'] },
     { name: 'Mis Galerías', icon: PhotoIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
     { name: 'Mis Pymes', icon: BuildingOfficeIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
+    { name: 'Mis Fuentes Especializadas', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
     
     { name: 'Confían en CiPress', icon: BuildingOfficeIcon, category: 'Área Comercial', visibleFor: ['cliente', 'empresa', 'administrador'], lockedFor: [] },
-    { name: 'Mis Servicios Freelance', icon: SparklesIcon, category: 'Área Comercial', visibleFor: ['cliente', 'administrador'], lockedFor: ['colaborador'] },
     
     { name: 'Mi Perfil de Talento', icon: UserIcon, category: 'Área Laboral', visibleFor: ['all'], lockedFor: [] },
+    { name: 'Mis Servicios Freelance', icon: SparklesIcon, category: 'Área Laboral', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'administrador'], lockedFor: [] },
     { name: 'Publicar Oferta Laboral', icon: BriefcaseIcon, category: 'Área Laboral', visibleFor: ['empresa', 'administrador'], lockedFor: [] },
-    { name: 'Mis Fuentes Especializadas', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
 ];
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ 
@@ -81,8 +86,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
     premiumSponsors, onAddSponsor, onUpdateSponsor,
     pressReleases, onAddPressRelease, onUpdatePressRelease, onDeletePressRelease, onGalleriesUpdated,
     shortCollaborations, onAddShortCollaboration, onUpdateShortCollaboration, onDeleteShortCollaboration,
-    specialists, onAddSpecialist, onUpdateSpecialist, onDeleteSpecialist, users,
-    initialSection = 'Mi Perfil'
+    specialists, onAddSpecialist, onUpdateSpecialist, onDeleteSpecialist,
+    freelanceServices, onAddFreelanceService, onUpdateFreelanceService, onDeleteFreelanceService,
+    users, initialSection = 'Mi Perfil'
 }) => {
     const [activeSection, setActiveSection] = useState<MenuSection>(initialSection);
     const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
@@ -334,22 +340,22 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                     />
                 ) : <div className="p-8 text-center text-gray-500 font-medium">Cargando...</div>;
             case 'Mis Servicios Freelance':
-                return (
-                    <div className="p-6 md:p-12 max-w-4xl mx-auto animate-fade-in">
-                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-12 text-center relative overflow-hidden">
-                            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-primary border border-orange-100">
-                                <SparklesIcon className="h-8 w-8 text-primary" />
-                            </div>
-                            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-100/70 text-orange-800 border border-orange-200 mb-3">
-                                🛠️ Próximamente • Módulo en Construcción
-                            </div>
-                            <h3 className="text-2xl font-bold font-serif text-gray-900 mb-2">Catálogo de Servicios Freelance</h3>
-                            <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
-                                Podrás ofrecer servicios periodísticos, traducción, corrección de estilo, reportería gráfica y asesorías comunicacionales con tarifas claras para medios y empresas.
-                            </p>
-                        </div>
-                    </div>
-                );
+                return currentUser ? (
+                    <MisServiciosFreelanceView
+                        currentUser={currentUser}
+                        freelanceServices={freelanceServices || []}
+                        onSave={async (data) => {
+                            if ('id' in data && data.id) {
+                                if (onUpdateFreelanceService) await onUpdateFreelanceService(data as FreelanceService);
+                            } else {
+                                if (onAddFreelanceService) await onAddFreelanceService(data as Omit<FreelanceService, 'id'>);
+                            }
+                        }}
+                        onDelete={async (id) => {
+                            if (onDeleteFreelanceService) await onDeleteFreelanceService(id);
+                        }}
+                    />
+                ) : <div className="p-8 text-center text-gray-500 font-medium">Cargando...</div>;
             case 'Publicar Oferta Laboral':
                 return (
                     <div className="p-6 md:p-12 max-w-4xl mx-auto animate-fade-in">

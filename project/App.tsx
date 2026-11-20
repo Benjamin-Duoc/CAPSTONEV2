@@ -537,18 +537,30 @@ const App: React.FC = () => {
   };
 
   // Freelance Services
+  const executeAddFreelanceService = async (item: Omit<FreelanceService, 'id'>): Promise<FreelanceService> => {
+    const res = await createFreelanceService(item);
+    setFreelanceServices(prev => [res, ...prev]);
+    return res;
+  };
+  const executeUpdateFreelanceService = async (item: FreelanceService): Promise<FreelanceService> => {
+    const res = await updateFreelanceService(item);
+    setFreelanceServices(prev => prev.map(i => i.id === res.id ? res : i));
+    return res;
+  };
+  const executeDeleteFreelanceService = async (id: number): Promise<void> => {
+    await deleteFreelanceService(id);
+    setFreelanceServices(prev => prev.filter(i => i.id !== id));
+  };
   const handleAddFreelanceService = async (item: Omit<FreelanceService, 'id'>) => {
     try {
-      const res = await createFreelanceService(item);
-      setFreelanceServices(prev => [...prev, res]);
+      await executeAddFreelanceService(item);
     } catch (e) {
       showAppAlert("Error", "Error al crear el servicio freelance.", "danger");
     }
   };
   const handleUpdateFreelanceService = async (item: FreelanceService) => {
     try {
-      const res = await updateFreelanceService(item);
-      setFreelanceServices(prev => prev.map(i => i.id === res.id ? res : i));
+      await executeUpdateFreelanceService(item);
     } catch (e) {
       showAppAlert("Error", "Error al actualizar el servicio freelance.", "danger");
     }
@@ -556,8 +568,7 @@ const App: React.FC = () => {
   const handleDeleteFreelanceService = (id: number) => {
     showAppConfirm('¿Eliminar Servicio Freelance?', '¿Estás seguro de que deseas eliminar este servicio freelance?', async () => {
       try {
-        await deleteFreelanceService(id);
-        setFreelanceServices(prev => prev.filter(i => i.id !== id));
+        await executeDeleteFreelanceService(id);
       } catch (e) {
         showAppAlert("Error", "Error al eliminar el servicio freelance.", "danger");
       }
@@ -1276,6 +1287,10 @@ const App: React.FC = () => {
              onAddSpecialist={executeAddSpecialist}
              onUpdateSpecialist={executeUpdateSpecialist}
              onDeleteSpecialist={executeDeleteSpecialist}
+             freelanceServices={freelanceServices}
+             onAddFreelanceService={executeAddFreelanceService}
+             onUpdateFreelanceService={executeUpdateFreelanceService}
+             onDeleteFreelanceService={executeDeleteFreelanceService}
              users={users}
              initialSection={
                initialTab === 'talent' ? 'Mi Perfil de Talento' : 
@@ -1286,6 +1301,7 @@ const App: React.FC = () => {
                initialTab === 'comunicados' ? 'Redactar Comunicado' :
                initialTab === 'specialist' ? 'Mis Fuentes Especializadas' :
                initialTab === 'urgentes' ? 'Colaboraciones Urgentes' :
+               initialTab === 'freelance' ? 'Mis Servicios Freelance' :
                'Mi Perfil'
              }
            />;

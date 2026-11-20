@@ -275,9 +275,71 @@ def create_db():
 
         # --- FREELANCE SERVICES ---
         services = [
-            {"service": "Gestión de Redes Sociales para Medios", "provider": "Laura Valdés", "category": "Marketing", "image_url": "https://picsum.photos/seed/freelance4/400/225", "description": "Estrategias de crecimiento de comunidad y distribución de contenido en plataformas digitales.", "linkedin_url": "https://www.linkedin.com/in/laura-valdes-ejemplo"},
-            {"service": "Edición de Video en Premiere Pro", "provider": "Carlos Mena", "category": "Audiovisual", "image_url": "https://picsum.photos/seed/freelance5/400/225", "description": "Edición rápida de notas informativas, entrevistas y mini-documentales para plataformas sociales.", "linkedin_url": "https://www.linkedin.com/in/carlos-mena-ejemplo"},
-            {"service": "Traducción de Artículos Inglés-Español", "provider": "Sofia Castillo", "category": "Traducción", "image_url": "https://picsum.photos/seed/freelance6/400/225", "description": "Traductora periodística bilingüe orientada a coyuntura internacional y reportajes de investigación.", "linkedin_url": "https://www.linkedin.com/in/sofia-castillo-ejemplo"}
+            {
+                "user_id": 4, # Juan Premium (Colaborador Premium)
+                "service": "Investigación Periodística y Reportajes de Profundidad",
+                "provider": "Juan Premium",
+                "category": "Redacción",
+                "price": "$180.000 / reportaje",
+                "delivery_time": "5 a 7 días hábiles",
+                "whatsapp_contact": "56933445566",
+                "email": "premium@colab.com",
+                "description": "Investigación periodística rigurosa, revisión documental, entrevistas a fuentes especializadas y entrega de artículo listo para publicación con formato SEO.",
+                "linkedin_url": "https://www.linkedin.com/in/juan-premium-periodista",
+                "image_url": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600"
+            },
+            {
+                "user_id": 5, # Pedro Gratis (Colaborador Gratis)
+                "service": "Cobertura de Prensa en Terreno y Despachos Regionales",
+                "provider": "Pedro Gratis",
+                "category": "Redacción",
+                "price": "$45.000 / pauta",
+                "delivery_time": "Mismo día / 24 hrs",
+                "whatsapp_contact": "56955667788",
+                "email": "gratis@colab.com",
+                "description": "Cobertura presencial de conferencias de prensa, eventos comunitarios y puntos de prensa en la Región del Biobío. Despacho de audio, texto y cuñas.",
+                "linkedin_url": "https://www.linkedin.com/in/pedro-gratis-periodista",
+                "image_url": "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600"
+            },
+            {
+                "user_id": 6, # Gaby Gratis (Colaborador Gratis)
+                "service": "Fotoperiodismo y Reportería Gráfica para Medios",
+                "provider": "Gaby Gratis",
+                "category": "Fotografía",
+                "price": "$60.000 / jornada",
+                "delivery_time": "Entrega digital inmediata",
+                "whatsapp_contact": "56944332211",
+                "email": "gaby@gratis.cl",
+                "description": "Registro fotográfico en alta resolución para noticias de actualidad, manifestaciones y retratos editoriales con derechos de publicación completos.",
+                "linkedin_url": "https://www.linkedin.com/in/gaby-gratis-fotoperiodista",
+                "image_url": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600"
+            },
+            {
+                "user_id": 1, # Ana Sanz (Administrador / Editora)
+                "service": "Corrección de Estilo y Fact-Checking Editorial",
+                "provider": "Ana Sanz",
+                "category": "Corrección",
+                "price": "$30.000 / documento",
+                "delivery_time": "24 a 48 hrs",
+                "whatsapp_contact": "56999887766",
+                "email": "ana@administrador.cl",
+                "description": "Revisión exhaustiva de ortotipografía, verificación de datos cruzados, coherencia narrativa y adaptación al manual de estilo CiPress.",
+                "linkedin_url": "https://www.linkedin.com/in/ana-sanz-editora",
+                "image_url": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600"
+            },
+            {
+                "user_id": None, # General
+                "service": "Edición y Postproducción de Video Informativo",
+                "provider": "Carlos Mena",
+                "category": "Audiovisual",
+                "price": "$50.000 / cápsula",
+                "delivery_time": "24 a 48 hrs",
+                "whatsapp_contact": "56977889900",
+                "email": "carlos.mena@ejemplo.cl",
+                "description": "Edición rápida de notas informativas, entrevistas con subtitulado dinámico y mini-documentales para redes sociales y plataformas web.",
+                "linkedin_url": "https://www.linkedin.com/in/carlos-mena-ejemplo",
+                "image_url": "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=600"
+            }
         ]
         for s in services:
             db.session.add(FreelanceService(**s))

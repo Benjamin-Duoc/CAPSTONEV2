@@ -113,6 +113,8 @@ class FreelanceServiceSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = FreelanceService
         load_instance = True
+        include_fk = True
+        unknown = 'exclude'
 
 class LegalTopicSchema(ma.SQLAlchemyAutoSchema):
     class Meta:

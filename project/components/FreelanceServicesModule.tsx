@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { FreelanceService } from '../types';
-import { SearchIcon, LinkedInIcon } from './icons';
+import { SearchIcon, LinkedInIcon, WhatsAppIcon } from './icons';
 
 interface FreelanceServicesModuleProps {
     freelanceServices: FreelanceService[];
@@ -17,28 +17,58 @@ const ServiceCard: React.FC<{ service: FreelanceService }> = ({ service }) => {
                 <div className="absolute top-4 left-4 bg-secondary text-white text-xs font-bold px-3 py-1 uppercase tracking-wider rounded-sm shadow-md">
                     {service.category}
                 </div>
+                {service.price && (
+                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-primary text-xs font-extrabold px-3 py-1 rounded-full shadow-md border border-orange-100">
+                        {service.price}
+                    </div>
+                )}
             </div>
             <div className="p-6 flex-grow flex flex-col">
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                     <div>
                         <h3 className="font-bold font-serif text-xl text-text-primary group-hover:text-primary transition-colors line-clamp-2">{service.service}</h3>
                         <p className="text-secondary font-medium mt-1 text-sm">{service.provider}</p>
                     </div>
                 </div>
+
+                {service.deliveryTime && (
+                    <div className="mb-3">
+                        <span className="inline-flex items-center text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                            ⏱️ Entrega: {service.deliveryTime}
+                        </span>
+                    </div>
+                )}
+
                 <p className="text-text-secondary text-base line-clamp-3 mb-6 flex-grow">{service.description}</p>
 
-                <div className="mt-auto space-y-4">
-                    <div className="border-t border-gray-100 pt-4"></div>
-                    <a
-                        href={service.linkedinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center space-x-2 bg-[#0077b5] hover:bg-[#005582] text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md group/btn"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <LinkedInIcon className="h-5 w-5 fill-current" />
-                        <span>Contactar en LinkedIn</span>
-                    </a>
+                <div className="mt-auto space-y-3">
+                    <div className="border-t border-gray-100 pt-3"></div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        {service.whatsappContact && (
+                            <a
+                                href={`https://wa.me/${service.whatsappContact.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center space-x-1.5 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-3 rounded-lg transition-colors shadow-sm text-xs"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <WhatsAppIcon className="h-4 w-4 fill-current" />
+                                <span>WhatsApp</span>
+                            </a>
+                        )}
+                        {service.linkedinUrl && (
+                            <a
+                                href={service.linkedinUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center space-x-1.5 bg-[#0077b5] hover:bg-[#005582] text-white font-bold py-2.5 px-3 rounded-lg transition-colors shadow-sm text-xs"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <LinkedInIcon className="h-4 w-4 fill-current" />
+                                <span>LinkedIn</span>
+                            </a>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

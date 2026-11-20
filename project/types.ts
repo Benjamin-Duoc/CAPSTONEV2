@@ -117,12 +117,18 @@ export interface NgoSpotlight {
 
 export interface FreelanceService {
     id: number;
+    userId?: number;
     service: string;
     provider: string;
     category: 'Redacción' | 'Corrección' | 'Fotografía' | 'Community Management' | 'Locución' | 'Marketing' | 'Audiovisual' | 'Traducción' | string;
-    imageUrl: string;
+    imageUrl?: string;
     description: string;
-    linkedinUrl: string;
+    price?: string;
+    deliveryTime?: string;
+    whatsappContact?: string;
+    email?: string;
+    linkedinUrl?: string;
+    createdAt?: string;
 }
 
 export interface CommunityAd {

@@ -251,12 +251,17 @@ class Job(db.Model):
 class FreelanceService(db.Model):
     __tablename__ = 'freelance_services'
     id = db.Column(db.Integer, primary_key=True)
-    service = db.Column(db.String)
-    provider = db.Column(db.String)
-    category = db.Column(db.String)
-    image_url = db.Column(db.String)
-    description = db.Column(db.String)
-    linkedin_url = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True) # Usuario que ofrece el servicio
+    service = db.Column(db.String, nullable=False) # Título del servicio
+    provider = db.Column(db.String, nullable=False) # Nombre del profesional
+    category = db.Column(db.String, nullable=False) # Categoría
+    price = db.Column(db.String, nullable=True) # Tarifa / Precio de referencia
+    delivery_time = db.Column(db.String, nullable=True) # Plazo de entrega
+    whatsapp_contact = db.Column(db.String, nullable=True) # WhatsApp directo
+    email = db.Column(db.String, nullable=True) # Email de contacto
+    linkedin_url = db.Column(db.String, nullable=True) # Enlace LinkedIn o Portafolio
+    image_url = db.Column(db.String, nullable=True)
+    description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # -----------------------------------------------------------------------------

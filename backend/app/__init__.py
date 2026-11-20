@@ -50,8 +50,26 @@ def create_app(config_class=None):
                         conn.execute(text("ALTER TABLE talent_profiles ADD COLUMN bio TEXT"))
                         conn.commit()
                     app.logger.info("Migración automática: Columna 'bio' añadida a talent_profiles")
+
+            if 'freelance_services' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('freelance_services')]
+                with db.engine.connect() as conn:
+                    if 'user_id' not in cols:
+                        conn.execute(text("ALTER TABLE freelance_services ADD COLUMN user_id INTEGER REFERENCES usuario(id)"))
+                    if 'price' not in cols:
+                        conn.execute(text("ALTER TABLE freelance_services ADD COLUMN price VARCHAR"))
+                    if 'delivery_time' not in cols:
+                        conn.execute(text("ALTER TABLE freelance_services ADD COLUMN delivery_time VARCHAR"))
+                    if 'whatsapp_contact' not in cols:
+                        conn.execute(text("ALTER TABLE freelance_services ADD COLUMN whatsapp_contact VARCHAR"))
+                    if 'email' not in cols:
+                        conn.execute(text("ALTER TABLE freelance_services ADD COLUMN email VARCHAR"))
+                    if 'created_at' not in cols:
+                        conn.execute(text("ALTER TABLE freelance_services ADD COLUMN created_at DATETIME"))
+                    conn.commit()
+                app.logger.info("Migración automática: Columnas verificadas para freelance_services")
         except Exception as e:
-            app.logger.warning(f"Aviso de compatibilidad de esquema talent_profiles: {e}")
+            app.logger.warning(f"Aviso de compatibilidad de esquema: {e}")
 
 
     # =========================================================================
