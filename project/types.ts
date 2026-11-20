@@ -184,13 +184,21 @@ export interface PhotojournalismPost {
 
 export interface Specialist {
     id: number;
+    userId?: number;
     name: string;
     title: string;
-    imageUrl: string;
-    specialtyDescription: string;
+    institution?: string;
+    category?: string;
+    email?: string;
     whatsappContact: string;
+    specialtyDescription: string;
+    notes?: string;
+    reliabilityLevel?: 'Fuente Primaria Verificada' | 'Experto Académico' | 'Vocero Institucional' | 'Colega Periodista CiPress' | string;
+    imageUrl?: string;
     dateAdded: string; // ISO date string for sorting
     textColor: string;
+    linkedUserId?: number;
+    isPublic?: boolean;
     isPremium?: boolean;
 }
 

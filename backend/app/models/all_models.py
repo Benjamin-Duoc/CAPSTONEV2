@@ -376,13 +376,21 @@ class TalentProfile(db.Model):
 class Specialist(db.Model):
     __tablename__ = 'specialists'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    title = db.Column(db.String)
-    image_url = db.Column(db.String)
-    specialty_description = db.Column(db.String)
-    whatsapp_contact = db.Column(db.String)
-    date_added = db.Column(db.Date)
-    text_color = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    name = db.Column(db.String, nullable=False)
+    title = db.Column(db.String, nullable=True)
+    institution = db.Column(db.String, nullable=True)
+    category = db.Column(db.String, nullable=True)
+    email = db.Column(db.String, nullable=True)
+    whatsapp_contact = db.Column(db.String, nullable=True)
+    specialty_description = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    reliability_level = db.Column(db.String, nullable=True)
+    image_url = db.Column(db.String, nullable=True)
+    text_color = db.Column(db.String, default="#FFFFFF")
+    date_added = db.Column(db.Date, nullable=True)
+    linked_user_id = db.Column(db.Integer, nullable=True)
+    is_public = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # -----------------------------------------------------------------------------

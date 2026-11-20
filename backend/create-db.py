@@ -57,9 +57,11 @@ def create_db():
 
             # Premium
             {"first_name": "Juan", "last_name": "Premium", "email": "premium@colab.com", "role": "Colaborador Premium", "region": "Valparaíso"},
+            {"first_name": "Pía", "last_name": "Premium", "email": "pia@premium.cl", "role": "Colaborador Premium", "region": "Valparaíso"},
 
             # Gratis
             {"first_name": "Pedro", "last_name": "Gratis", "email": "gratis@colab.com", "role": "Colaborador Gratis", "region": "Biobío"},
+            {"first_name": "Gaby", "last_name": "Gratis", "email": "gaby@gratis.cl", "role": "Colaborador Gratis", "region": "Biobío"},
         ]
 
         for u_data in users_to_create:
@@ -350,9 +352,179 @@ def create_db():
 
         # --- SPECIALISTS ---
         specialists = [
-            {"name": "Dra. Carolina Vera", "title": "Climatóloga, U. de Chile", "image_url": "https://picsum.photos/seed/spec1/400/400", "specialty_description": "Experta en cambio climático.", "whatsapp_contact": "56911112222", "date_added": date(2024, 7, 25), "text_color": "#FFFFFF"},
-            {"name": "Marcos Sánchez", "title": "Analista Económico Senior", "image_url": "https://picsum.photos/seed/spec2/400/400", "specialty_description": "Especialista en macroeconomía.", "whatsapp_contact": "56922223333", "date_added": date(2024, 7, 24), "text_color": "#FFFFFF"},
-            {"name": "Ricardo Núñez", "title": "Experto en Ciberseguridad", "image_url": "https://picsum.photos/seed/spec4/400/400", "specialty_description": "Analiza tendencias en ciberataques.", "whatsapp_contact": "56944445555", "date_added": date(2024, 7, 22), "text_color": "#FFFFFF"}
+            # Fuentes para Administrador (User ID: 1 - ana@administrador.cl)
+            {
+                "user_id": 1,
+                "name": "Dr. Cristóbal Cuadrado",
+                "title": "Médico y Salubrista, Ex Subsecretario de Salud",
+                "institution": "Escuela de Salud Pública, Universidad de Chile",
+                "category": "Salud y Epidemiología",
+                "reliability_level": "Fuente Primaria Verificada",
+                "email": "ccuadrado@uchile.cl",
+                "whatsapp_contact": "56911223344",
+                "specialty_description": "Especialista en políticas sanitarias, epidemiología, presupuesto de salud y gestión hospitalaria.",
+                "notes": "Excelente disposición para entrevistas en profundidad sobre reformas al sistema de salud y análisis de coberturas GES/Fonasa.",
+                "image_url": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400",
+                "date_added": date(2024, 7, 25),
+                "text_color": "#FFFFFF",
+                "is_public": True
+            },
+            {
+                "user_id": 1,
+                "name": "Juan Premium",
+                "title": "Periodista de Investigación Regional",
+                "institution": "CiPress Red Valparaíso",
+                "category": "Contacto Red CiPress",
+                "reliability_level": "Colega Periodista CiPress",
+                "email": "premium@colab.com",
+                "whatsapp_contact": "56933445566",
+                "specialty_description": "Coberturas de terreno en la Quinta Región, temas medioambientales, conflictos portuarios y reportajes de investigación.",
+                "notes": "Colega de la red CiPress disponible para despachos urgentes y cruce de datos locales en la Región de Valparaíso.",
+                "image_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+                "date_added": date(2024, 7, 26),
+                "text_color": "#FFFFFF",
+                "linked_user_id": 4,
+                "is_public": True
+            },
+
+            # Fuentes para Colaborador Premium (User ID: 4 - premium@colab.com)
+            {
+                "user_id": 4,
+                "name": "Dra. Andrea Repetto",
+                "title": "Economista Senior y Académica",
+                "institution": "Pontificia Universidad Católica / Espacio Público",
+                "category": "Economía y Negocios",
+                "reliability_level": "Experto Académico",
+                "email": "arepetto@uc.cl",
+                "whatsapp_contact": "56922334455",
+                "specialty_description": "Economía laboral, mercado del trabajo, políticas fiscales, combate a la pobreza y reformas previsionales.",
+                "notes": "Fuente altamente rigurosa. Consultar antes de la publicación de cifras del INE o discusiones de salario mínimo en el Congreso.",
+                "image_url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
+                "date_added": date(2024, 7, 24),
+                "text_color": "#FFFFFF",
+                "is_public": True
+            },
+            {
+                "user_id": 4,
+                "name": "Ricardo Núñez",
+                "title": "Especialista en Ciberseguridad e Infraestructura Crítica",
+                "institution": "CSIRT / Alianza de Seguridad Digital",
+                "category": "Tecnología e IA",
+                "reliability_level": "Vocero Institucional",
+                "email": "rnunez@seguridaddigital.cl",
+                "whatsapp_contact": "56944445555",
+                "specialty_description": "Incidentes de seguridad de la información, ciberataques financieros, privacidad de datos y marco legal de ciberseguridad.",
+                "notes": "Contactar por WhatsApp para comentarios urgentes ante caídas masivas de servicios o filtraciones de bases de datos.",
+                "image_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+                "date_added": date(2024, 7, 22),
+                "text_color": "#FFFFFF",
+                "is_public": True
+            },
+            {
+                "user_id": 4,
+                "name": "Ana Sanz",
+                "title": "Editora General y Verificadora de Hechos",
+                "institution": "CiPress Redacción Central",
+                "category": "Contacto Red CiPress",
+                "reliability_level": "Colega Periodista CiPress",
+                "email": "ana@administrador.cl",
+                "whatsapp_contact": "56999887766",
+                "specialty_description": "Edición editorial, derecho a la información, verificación de fuentes oficiales y validación de coberturas especiales.",
+                "notes": "Editora responsable para revisión de comunicados en Prime Time y asignación de coberturas en Santiago.",
+                "image_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400",
+                "date_added": date(2024, 7, 20),
+                "text_color": "#FFFFFF",
+                "linked_user_id": 1,
+                "is_public": True
+            },
+
+            # Fuentes para Empresa (User ID: 3 - ely@empresa.cl)
+            {
+                "user_id": 3,
+                "name": "Dr. Benjamín Parra",
+                "title": "Ingeniero en Energías Renovables y Transición Energética",
+                "institution": "Centro de Innovación Tecnológica y ERNC",
+                "category": "Medioambiente y Energía",
+                "reliability_level": "Experto Académico",
+                "email": "bparra@energia.cl",
+                "whatsapp_contact": "56988889999",
+                "specialty_description": "Transición energética, proyectos de hidrógeno verde, almacenamiento de baterías BESS y descarbonización industrial.",
+                "notes": "Experto idóneo para contrastar cifras de inversión en energías limpias y viabilidad técnica de megaproyectos energéticos.",
+                "image_url": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400",
+                "date_added": date(2024, 7, 18),
+                "text_color": "#FFFFFF",
+                "is_public": True
+            },
+            {
+                "user_id": 3,
+                "name": "Pedro Gratis",
+                "title": "Periodista Freelance y Reportero Gráfico",
+                "institution": "CiPress Red Biobío",
+                "category": "Contacto Red CiPress",
+                "reliability_level": "Colega Periodista CiPress",
+                "email": "gratis@colab.com",
+                "whatsapp_contact": "56955667788",
+                "specialty_description": "Reportería en terreno en el sur de Chile, cobertura comunitaria y reportajes regionales.",
+                "notes": "Colaborador disponible para coberturas express y despachos gráficos en la zona central y sur.",
+                "image_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                "date_added": date(2024, 7, 21),
+                "text_color": "#FFFFFF",
+                "linked_user_id": 5,
+                "is_public": True
+            },
+
+            # Fuentes para Colaborador Gratis (User ID: 5 - gratis@colab.com)
+            {
+                "user_id": 5,
+                "name": "Dra. Carolina Vera",
+                "title": "Directora del Centro de Cambio Climático y Resiliencia",
+                "institution": "Universidad de Chile",
+                "category": "Medioambiente y Energía",
+                "reliability_level": "Experto Académico",
+                "email": "cvera@uchile.cl",
+                "whatsapp_contact": "56911112222",
+                "specialty_description": "Modelos climáticos, sequía en la zona centro-sur, eventos meteorológicos extremos y políticas de adaptación.",
+                "notes": "Fuente principal para contrastar datos de precipitaciones, olas de calor y riesgo de incendios forestales.",
+                "image_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+                "date_added": date(2024, 7, 25),
+                "text_color": "#FFFFFF",
+                "is_public": True
+            },
+            {
+                "user_id": 5,
+                "name": "Gaby Gratis",
+                "title": "Fotoperiodista Documental",
+                "institution": "CiPress Red Biobío",
+                "category": "Contacto Red CiPress",
+                "reliability_level": "Colega Periodista CiPress",
+                "email": "gaby@gratis.cl",
+                "whatsapp_contact": "56944332211",
+                "specialty_description": "Coberturas fotoperiodísticas, archivo histórico regional y bancos de imágenes.",
+                "notes": "Colega colaboradora para cobertura audiovisual de noticias de la región y venta de fotografías editoriales.",
+                "image_url": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400",
+                "date_added": date(2024, 7, 22),
+                "text_color": "#FFFFFF",
+                "linked_user_id": 6,
+                "is_public": True
+            },
+
+            # Fuente pública general
+            {
+                "user_id": None,
+                "name": "Marcos Sánchez",
+                "title": "Analista Económico Senior",
+                "institution": "Observatorio de Mercados Financieros",
+                "category": "Economía y Negocios",
+                "reliability_level": "Experto Académico",
+                "email": "msanchez@mercados.cl",
+                "whatsapp_contact": "56922223333",
+                "specialty_description": "Especialista en macroeconomía, proyecciones de crecimiento, inflación y política monetaria del Banco Central.",
+                "notes": "Disponible para cuñas y comentarios rápidos en jornadas de publicación del IPOM o IPC.",
+                "image_url": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400",
+                "date_added": date(2024, 7, 24),
+                "text_color": "#FFFFFF",
+                "is_public": True
+            }
         ]
         for sp in specialists:
             db.session.add(Specialist(**sp))

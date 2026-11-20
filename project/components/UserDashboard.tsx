@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { User, PremiumSponsor, PressRelease, ShortCollaboration } from '../types';
+import type { User, PremiumSponsor, PressRelease, ShortCollaboration, Specialist } from '../types';
 import { initiatePayment } from '../utils/db';
 import MyProfileView from './dashboard/MyProfileView';
 import ConfianEnCipressView from './dashboard/ConfianEnCipressView';
@@ -8,6 +8,7 @@ import MisGaleriasView from './dashboard/MisGaleriasView';
 import MisPymesView from './dashboard/MisPymesView';
 import TalentProfileView from './dashboard/TalentProfileView';
 import UrgentCollaborationsView from './dashboard/UrgentCollaborationsView';
+import MisFuentesEspecializadasView from './dashboard/MisFuentesEspecializadasView';
 import CiPressModal, { CiPressModalType } from './common/CiPressModal';
 import { 
     UserIcon, 
@@ -40,6 +41,11 @@ interface UserDashboardProps {
     onAddShortCollaboration: (collaboration: Omit<ShortCollaboration, 'id'>) => Promise<void>;
     onUpdateShortCollaboration: (collaboration: ShortCollaboration) => Promise<void>;
     onDeleteShortCollaboration: (id: number) => Promise<void>;
+    specialists?: Specialist[];
+    onAddSpecialist?: (specialist: Omit<Specialist, 'id' | 'dateAdded'>) => Promise<Specialist>;
+    onUpdateSpecialist?: (specialist: Specialist) => Promise<Specialist>;
+    onDeleteSpecialist?: (id: number) => Promise<void>;
+    users?: User[];
     initialSection?: MenuSection;
 }
 
@@ -67,7 +73,7 @@ const MENU_ITEMS: MenuItem[] = [
     
     { name: 'Mi Perfil de Talento', icon: UserIcon, category: 'Área Laboral', visibleFor: ['all'], lockedFor: [] },
     { name: 'Publicar Oferta Laboral', icon: BriefcaseIcon, category: 'Área Laboral', visibleFor: ['empresa', 'administrador'], lockedFor: [] },
-    { name: 'Mis Fuentes Especializadas', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: ['colaborador gratis', 'colaborador'] },
+    { name: 'Mis Fuentes Especializadas', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
 ];
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ 
@@ -75,6 +81,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
     premiumSponsors, onAddSponsor, onUpdateSponsor,
     pressReleases, onAddPressRelease, onUpdatePressRelease, onDeletePressRelease, onGalleriesUpdated,
     shortCollaborations, onAddShortCollaboration, onUpdateShortCollaboration, onDeleteShortCollaboration,
+    specialists, onAddSpecialist, onUpdateSpecialist, onDeleteSpecialist, users,
     initialSection = 'Mi Perfil'
 }) => {
     const [activeSection, setActiveSection] = useState<MenuSection>(initialSection);
@@ -309,22 +316,23 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
                     }}
                 /> : <div className="p-8 text-center text-gray-500 font-medium">Cargando...</div>;
             case 'Mis Fuentes Especializadas':
-                return (
-                    <div className="p-6 md:p-12 max-w-4xl mx-auto animate-fade-in">
-                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-12 text-center relative overflow-hidden">
-                            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-primary border border-orange-100">
-                                <SparklesIcon className="h-8 w-8 text-primary" />
-                            </div>
-                            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-100/70 text-orange-800 border border-orange-200 mb-3">
-                                🛠️ Próximamente • Módulo en Construcción
-                            </div>
-                            <h3 className="text-2xl font-bold font-serif text-gray-900 mb-2">Directorio de Fuentes Especializadas</h3>
-                            <p className="text-gray-500 max-w-md mx-auto text-sm leading-relaxed">
-                                Podrás registrar, categorizar y mantener tu red de contactos y fuentes confiables para coberturas periodísticas rigurosas.
-                            </p>
-                        </div>
-                    </div>
-                );
+                return currentUser ? (
+                    <MisFuentesEspecializadasView
+                        currentUser={currentUser}
+                        specialists={specialists || []}
+                        users={users || []}
+                        onSave={async (data) => {
+                            if ('id' in data && data.id) {
+                                if (onUpdateSpecialist) await onUpdateSpecialist(data as Specialist);
+                            } else {
+                                if (onAddSpecialist) await onAddSpecialist(data as Omit<Specialist, 'id' | 'dateAdded'>);
+                            }
+                        }}
+                        onDelete={async (id) => {
+                            if (onDeleteSpecialist) await onDeleteSpecialist(id);
+                        }}
+                    />
+                ) : <div className="p-8 text-center text-gray-500 font-medium">Cargando...</div>;
             case 'Mis Servicios Freelance':
                 return (
                     <div className="p-6 md:p-12 max-w-4xl mx-auto animate-fade-in">
@@ -435,7 +443,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
             </aside>
 
             {/* Contenido Principal */}
-            <main className="flex-1 bg-white relative z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)] pt-4 md:pt-0 pb-12 md:pb-24">
+            <main className="flex-1 bg-white shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.02)] pt-4 md:pt-0 pb-12 md:pb-24">
                 {renderContent()}
             </main>
 

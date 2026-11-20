@@ -775,6 +775,10 @@ const App: React.FC = () => {
     setSpecialists(prev => prev.map(i => i.id === res.id ? res : i));
     return res;
   };
+  const executeDeleteSpecialist = async (id: number): Promise<void> => {
+    await deleteSpecialist(id);
+    setSpecialists(prev => prev.filter(i => i.id !== id));
+  };
   const handleAddSpecialist = async (item: Omit<Specialist, 'id' | 'dateAdded'>) => {
     try {
       await executeAddSpecialist(item);
@@ -794,8 +798,7 @@ const App: React.FC = () => {
   const handleDeleteSpecialist = (id: number) => {
     showAppConfirm('¿Eliminar Fuente?', '¿Estás seguro de que deseas eliminar esta fuente especializada?', async () => {
       try {
-        await deleteSpecialist(id);
-        setSpecialists(prev => prev.filter(i => i.id !== id));
+        await executeDeleteSpecialist(id);
       } catch (e) {
         showAppAlert("Error", "Error al eliminar la fuente.", "danger");
       }
@@ -1269,6 +1272,11 @@ const App: React.FC = () => {
              onAddShortCollaboration={executeAddShortCollaboration}
              onUpdateShortCollaboration={executeUpdateShortCollaboration}
              onDeleteShortCollaboration={executeDeleteShortCollaboration}
+             specialists={specialists}
+             onAddSpecialist={executeAddSpecialist}
+             onUpdateSpecialist={executeUpdateSpecialist}
+             onDeleteSpecialist={executeDeleteSpecialist}
+             users={users}
              initialSection={
                initialTab === 'talent' ? 'Mi Perfil de Talento' : 
                initialTab === 'comunicado' ? 'Redactar Comunicado' : 

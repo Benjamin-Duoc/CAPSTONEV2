@@ -167,6 +167,8 @@ class SpecialistSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Specialist
         load_instance = True
+        include_fk = True
+        unknown = 'exclude'
 
 class SpecialAdSchema(ma.SQLAlchemyAutoSchema):
     class Meta:

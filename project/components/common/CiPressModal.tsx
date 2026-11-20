@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ExclamationTriangleIcon,
     TrashIcon,
@@ -34,9 +35,13 @@ export const CiPressModal: React.FC<CiPressModalProps> = ({
     onCancel,
     onClose
 }) => {
-    // ESC key closes modal
+    // ESC key closes modal & Body scroll lock
     useEffect(() => {
         if (!isOpen) return;
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 if (onCancel) onCancel();
@@ -44,7 +49,10 @@ export const CiPressModal: React.FC<CiPressModalProps> = ({
             }
         };
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
     }, [isOpen, onCancel, onClose]);
 
     if (!isOpen) return null;
@@ -106,15 +114,15 @@ export const CiPressModal: React.FC<CiPressModalProps> = ({
         }
     };
 
-    return (
+    const modalContent = (
         <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex justify-center items-center p-4 transition-opacity animate-fade-in"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4 transition-opacity animate-fade-in"
             onClick={handleBackdropClick}
             role="dialog"
             aria-modal="true"
         >
             <div 
-                className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 w-full max-w-md border border-gray-100 flex flex-col transform transition-all relative overflow-hidden"
+                className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 w-full max-w-md border border-gray-100 flex flex-col transform transition-all relative overflow-hidden overscroll-contain"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Close Button top-right */}
@@ -179,6 +187,8 @@ export const CiPressModal: React.FC<CiPressModalProps> = ({
             </div>
         </div>
     );
+
+    return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
 
 export default CiPressModal;

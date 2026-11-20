@@ -48,25 +48,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLoginSuccess, retur
 
             <div className="max-w-md w-full space-y-4 bg-surface p-8 rounded-lg shadow-xl border border-gray-200">
                 {/* Quick Login Buttons for Testing */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-5 gap-1.5 mb-4">
                     <button
                         type="button"
                         onClick={() => { setFormData({ email: 'ana@administrador.cl', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
                         className="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-bold py-2 rounded transition-colors text-center"
+                        title="Administrador (ana@administrador.cl)"
                     >
                         Admin
                     </button>
                     <button
                         type="button"
-                        onClick={() => { setFormData({ email: 'gaby@gratis.cl', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
+                        onClick={() => { setFormData({ email: 'gratis@colab.com', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
                         className="bg-green-100 hover:bg-green-200 text-green-800 text-xs font-bold py-2 rounded transition-colors text-center"
+                        title="Colaborador Gratis (gratis@colab.com)"
                     >
                         Colab
                     </button>
                     <button
                         type="button"
-                        onClick={() => { setFormData({ email: 'pia@premium.cl', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
-                        className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-bold py-2 rounded transition-colors text-center"
+                        onClick={() => { setFormData({ email: 'premium@colab.com', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold py-2 rounded transition-colors text-center"
+                        title="Colaborador Premium (premium@colab.com)"
+                    >
+                        Premium
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setFormData({ email: 'vip@cliente.com', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
+                        className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold py-2 rounded transition-colors text-center"
+                        title="Cliente Corporativo VIP (vip@cliente.com)"
                     >
                         Cliente
                     </button>
@@ -74,6 +85,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onLoginSuccess, retur
                         type="button"
                         onClick={() => { setFormData({ email: 'ely@empresa.cl', password: '123' }); setTimeout(() => document.getElementById('login-btn')?.click(), 100); }}
                         className="bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-bold py-2 rounded transition-colors text-center"
+                        title="Empresa Auspiciadora (ely@empresa.cl)"
                     >
                         Empresa
                     </button>
