@@ -1328,11 +1328,13 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                             </div>
                               <button
                                 onClick={() => {
-                                    if (currentUser) {
-                                        onNavigate('dashboard', 'urgentes');
-                                    } else {
+                                    if (!currentUser) {
                                         setLoginGuardRedirect('urgentes');
                                         setIsLoginGuardOpen(true);
+                                    } else if ((currentUser.role || '').toLowerCase() === 'cliente') {
+                                        showAlert('Acceso Restringido por Rol', 'Tu cuenta Cliente VIP está dedicada exclusivamente a gestionar tu presencia en "Confían en CiPress".', 'info');
+                                    } else {
+                                        onNavigate('dashboard', 'urgentes');
                                     }
                                 }}
                                 className="w-full mt-4 py-2 text-sm font-bold text-white bg-primary rounded-md hover:bg-orange-600 transition-colors shadow-md">
@@ -1431,11 +1433,13 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                     </button>
                                      <button
                                         onClick={() => {
-                                            if (currentUser) {
-                                                onNavigate('dashboard', 'comunicados');
-                                            } else {
+                                            if (!currentUser) {
                                                 setLoginGuardRedirect('comunicados');
                                                 setIsLoginGuardOpen(true);
+                                            } else if ((currentUser.role || '').toLowerCase() === 'cliente') {
+                                                showAlert('Acceso Restringido por Rol', 'Tu cuenta Cliente VIP está dedicada exclusivamente a gestionar tu presencia en "Confían en CiPress".', 'info');
+                                            } else {
+                                                onNavigate('dashboard', 'comunicados');
                                             }
                                         }}
                                         className="w-full py-2 text-sm font-bold text-white bg-secondary rounded-md hover:bg-blue-800 transition-colors"

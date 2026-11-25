@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { User, TalentProfile, TalentAuditResult } from '../../types';
 import TalentProfileForm from '../admin/TalentProfileForm';
 import { getMyTalentProfile, saveMyTalentProfile, auditTalentProfile } from '../../utils/db';
+import { isPremiumUser, isAdminUser } from '../../utils/roleUtils';
 import { 
     SparklesIcon, 
     CheckCircleIcon, 
@@ -40,7 +41,7 @@ const TalentProfileView: React.FC<TalentProfileViewProps> = ({ currentUser }) =>
         onConfirm: () => {}
     });
 
-    const isPremium = (currentUser.role || '').toLowerCase().includes('premium');
+    const isPremium = isPremiumUser(currentUser) || isAdminUser(currentUser);
 
     const showAlert = (title: string, message: string, type: CiPressModalType = 'info') => {
         setModalConfig({

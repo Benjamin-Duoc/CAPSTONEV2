@@ -30,8 +30,8 @@ def save():
         # Only check limit for NEW press releases
         if not item_id and author_user_id:
             user = User.query.get(author_user_id)
-            # If user is not Premium, check daily limit
-            if user and (not user.role or 'premium' not in user.role.lower()):
+            # If user is not Premium or Admin, check daily limit
+            if user and (not user.role or ('premium' not in user.role.lower() and 'administrador' not in user.role.lower())):
                 # Get start of current day (midnight)
                 today_start = datetime.combine(datetime.utcnow().date(), time.min)
                 

@@ -49,15 +49,17 @@ const TalentDetailPage: React.FC<TalentDetailPageProps> = ({ profile, onBack }) 
                             <p className="mt-2 text-primary font-bold text-lg">{profile.title}</p>
                             
                             <div className="mt-8 space-y-4">
-                                <a 
-                                    href={profile.linkedinUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="w-full py-4 px-6 bg-[#0077B5] text-white font-bold rounded-2xl hover:bg-[#005E92] transition-all shadow-lg shadow-[#0077B5]/20 flex items-center justify-center space-x-3"
-                                >
-                                    <LinkedInIcon className="h-5 w-5" />
-                                    <span>LINKEDIN</span>
-                                </a>
+                                {profile.isPremium && profile.linkedinUrl && (
+                                    <a 
+                                        href={profile.linkedinUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="w-full py-4 px-6 bg-[#0077B5] text-white font-bold rounded-2xl hover:bg-[#005E92] transition-all shadow-lg shadow-[#0077B5]/20 flex items-center justify-center space-x-3"
+                                    >
+                                        <LinkedInIcon className="h-5 w-5" />
+                                        <span>LINKEDIN</span>
+                                    </a>
+                                )}
                                 
                                 <a 
                                     href={`mailto:${profile.email || 'contacto@cipress.cl'}`} 
@@ -100,7 +102,12 @@ const TalentDetailPage: React.FC<TalentDetailPageProps> = ({ profile, onBack }) 
                                 </h2>
                                 <div className="mt-4 h-1 w-20 bg-primary rounded-full"></div>
                                 <p className="mt-6 text-text-secondary text-lg leading-relaxed italic">
-                                    "Apasionado por la innovación en medios y el periodismo de datos. Con {profile.experienceYears} años de experiencia, busco transformar la narrativa tradicional en experiencias digitales memorables."
+                                    {profile.bio
+                                        ? `"${profile.bio}"`
+                                        : profile.isPremium
+                                            ? `"Apasionado por la innovación en medios y el periodismo de datos. Con ${profile.experienceYears} años de experiencia, busco transformar la narrativa tradicional en experiencias digitales memorables."`
+                                            : '"Profesional de las comunicaciones registrado en el Banco de Talentos de CiPress."'
+                                    }
                                 </p>
                             </div>
 

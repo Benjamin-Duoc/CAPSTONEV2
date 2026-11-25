@@ -169,6 +169,9 @@ def create_app(config_class=None):
     from .routes.press_release_routes import press_release_bp
     app.register_blueprint(press_release_bp)
 
+    from .routes.short_collaboration_routes import short_collab_bp
+    app.register_blueprint(short_collab_bp)
+
     from .routes.payment_routes import payment_bp
     app.register_blueprint(payment_bp)
 
@@ -221,7 +224,7 @@ def create_app(config_class=None):
         ('promo_videos', PromoVideo, PromoVideoSchema, '/api/promo-videos'),
         ('resources', Resource, ResourceSchema, '/api/resources'),
         # ('shareable_photos', ShareablePhoto, ShareablePhotoSchema, '/api/shareable-photos'), # Replaced by custom
-        ('short_collaborations', ShortCollaboration, ShortCollaborationSchema, '/api/short-collaborations'),
+        # ('short_collaborations', ShortCollaboration, ShortCollaborationSchema, '/api/short-collaborations'), # Replaced by custom short_collab_bp
         ('site_stats', SiteStat, SiteStatSchema, '/api/site-stats'),
         ('special_ads', SpecialAd, SpecialAdSchema, '/api/special-ads'),
         ('specialists', Specialist, SpecialistSchema, '/api/specialists'),

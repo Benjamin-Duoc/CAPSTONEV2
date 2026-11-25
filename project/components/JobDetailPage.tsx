@@ -3,6 +3,7 @@ import type { Job, User } from '../types';
 import { BriefcaseIcon, MapPinIcon } from './icons';
 import { SparklesIcon } from '@heroicons/react/24/solid';
 import JobMatchmakingModal from './JobMatchmakingModal';
+import { isAdminUser } from '../utils/roleUtils';
 
 interface JobDetailPageProps {
     job: Job;
@@ -16,7 +17,7 @@ const JobDetailPage: React.FC<JobDetailPageProps> = ({ job, currentUser, onBack 
     // Solo el creador de la vacante o administradores pueden ver los candidatos compatibles con IA
     const isJobOwnerOrAdmin = Boolean(
         currentUser && (
-            currentUser.role === 'admin' || 
+            isAdminUser(currentUser) || 
             (job.userId && currentUser.id === job.userId) || 
             (job.authorUserId && currentUser.id === job.authorUserId) ||
             (job.applyEmail && currentUser.email?.toLowerCase() === job.applyEmail?.toLowerCase())

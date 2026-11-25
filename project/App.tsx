@@ -1309,6 +1309,7 @@ const App: React.FC = () => {
              users={users}
              initialSection={
                initialTab === 'talent' ? 'Mi Perfil de Talento' : 
+               initialTab === 'subscription' ? 'Suscripción' :
                initialTab === 'comunicado' ? 'Redactar Comunicado' : 
                initialTab === 'emprendimiento' ? 'Confían en CiPress' : 
                initialTab === 'pyme' ? 'Mis Pymes' :

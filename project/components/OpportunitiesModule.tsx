@@ -33,6 +33,13 @@ import FreelanceServicesModule from './FreelanceServicesModule';
 import JobMatchmakingModal from './JobMatchmakingModal';
 import ShortCollaborationForm from './admin/ShortCollaborationForm';
 import CiPressModal, { CiPressModalType } from './common/CiPressModal';
+import {
+    isAdminUser,
+    isClienteUser,
+    isEmpresaUser,
+    canPublishUrgentCollaboration,
+    canHaveTalentProfile
+} from '../utils/roleUtils';
 
 interface OpportunitiesModuleProps {
     jobs: Job[];
@@ -97,7 +104,7 @@ const JobCard: React.FC<{
 }> = ({ job, currentUser, onSelect, onOpenMatchmaking, matchInfo }) => {
     const isJobOwnerOrAdmin = Boolean(
         currentUser && (
-            currentUser.role === 'admin' || 
+            isAdminUser(currentUser) || 
             (job.userId && currentUser.id === job.userId) || 
             (job.authorUserId && currentUser.id === job.authorUserId) ||
             (job.applyEmail && currentUser.email?.toLowerCase() === job.applyEmail?.toLowerCase())
@@ -190,7 +197,7 @@ const UrgentCollaborationCard: React.FC<{
     onDelete: (id: number) => void;
     matchInfo?: TalentCollabMatch;
 }> = ({ collab, currentUser, onMatchmaking, onEdit, onDelete, matchInfo }) => {
-    const isOwnerOrAdmin = Boolean(currentUser && (currentUser.id === collab.authorUserId || currentUser.role === 'admin'));
+    const isOwnerOrAdmin = Boolean(currentUser && (currentUser.id === collab.authorUserId || isAdminUser(currentUser)));
 
     return (
         <div className="bg-surface rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 group flex flex-col justify-between space-y-4">
@@ -362,15 +369,17 @@ const TalentProfileCard: React.FC<{ profile: TalentProfile; onSelect: () => void
 
         {/* Buttons Area (Separate from Detail Click) */}
         <div className="w-full px-5 pb-5 flex flex-col space-y-2">
-            <a 
-                href={profile.linkedinUrl || "https://www.linkedin.com"} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-full px-4 py-2 text-xs font-bold text-white bg-[#0077B5] rounded-md hover:bg-[#005E92] transition-colors flex items-center justify-center space-x-2 shadow-sm z-10"
-            >
-                <LinkedInIcon className="h-4 w-4" />
-                <span>LinkedIn</span>
-            </a>
+            {profile.isPremium && profile.linkedinUrl && (
+                <a 
+                    href={profile.linkedinUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="w-full px-4 py-2 text-xs font-bold text-white bg-[#0077B5] rounded-md hover:bg-[#005E92] transition-colors flex items-center justify-center space-x-2 shadow-sm z-10"
+                >
+                    <LinkedInIcon className="h-4 w-4" />
+                    <span>LinkedIn</span>
+                </a>
+            )}
             
             <a 
                 href={`mailto:${profile.email || 'contacto@cipress.cl'}`} 
@@ -560,9 +569,19 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
     const handleCreateProfileClick = () => {
         if (!currentUser) {
             setIsLoginGuardOpen(true);
-        } else {
-            onNavigate('dashboard', 'talent');
+            return;
         }
+        if (!canHaveTalentProfile(currentUser)) {
+            showCiPressAlert(
+                'Perfil exclusivo para Periodistas',
+                isEmpresaUser(currentUser)
+                    ? 'Tu cuenta de Empresa está diseñada para publicar ofertas laborales y reclutar profesionales del Banco de Talentos, no para registrarte como postulante.'
+                    : 'Tu cuenta Cliente VIP está dedicada exclusivamente a la gestión de patrocinio institucional en CiPress.',
+                'info'
+            );
+            return;
+        }
+        onNavigate('dashboard', 'talent');
     };
 
     // Handlers para Vacantes
@@ -671,6 +690,39 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
         });
     }, [collaborations, isCollabFilterActive, talentCollabMatches]);
 
+    // Guardia de rol para abrir formulario de publicación de Colaboraciones Urgentes
+    const handleOpenPublishCollaboration = () => {
+        if (!currentUser) {
+            setIsLoginGuardOpen(true);
+            return;
+        }
+        if (isClienteUser(currentUser)) {
+            showCiPressAlert(
+                'Acceso Restringido por Rol',
+                'Las colaboraciones urgentes están disponibles para cuentas de Colaborador Premium, Empresa o Administrador. Tu cuenta Cliente VIP está enfocada en el patrocinio de marca.',
+                'info'
+            );
+            return;
+        }
+        if (!canPublishUrgentCollaboration(currentUser)) {
+            setModalConfig({
+                isOpen: true,
+                type: 'warning',
+                title: 'Función Exclusiva Premium',
+                message: 'Publicar avisos de Colaboraciones Urgentes es un beneficio exclusivo para cuentas Premium. Mejora tu plan para conectar al instante con periodistas disponibles en terreno.',
+                confirmText: 'Ver Planes Premium',
+                cancelText: 'Cancelar',
+                onConfirm: () => {
+                    setModalConfig(prev => ({ ...prev, isOpen: false }));
+                    onNavigate('dashboard', 'subscription');
+                }
+            });
+            return;
+        }
+        setEditingCollab(null);
+        setIsPublishCollabOpen(true);
+    };
+
     // Handlers para Colaboraciones Urgentes
     const handleSaveCollaboration = async (data: ShortCollaboration | Omit<ShortCollaboration, 'id'>) => {
         const nameFallback = currentUser 
@@ -696,9 +748,9 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
             setIsPublishCollabOpen(false);
             setEditingCollab(null);
             showCiPressAlert('¡Aviso Publicado!', 'Tu pedido de colaboración urgente ha sido publicado exitosamente.', 'success');
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error al guardar colaboración urgente:", error);
-            showCiPressAlert('Error al Publicar', 'Hubo un error en el servidor al intentar guardar el aviso.', 'danger');
+            showCiPressAlert('Error al Publicar', error?.message || 'Hubo un error en el servidor al intentar guardar el aviso.', 'danger');
         }
     };
 
@@ -771,14 +823,18 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                         <span>Motor IA de Recomendación Laboral</span>
                                     </div>
                                     <h3 className="text-xl md:text-2xl font-extrabold font-serif">
-                                        {currentUser 
-                                            ? (myTalentProfile?.title ? `¡Descubre qué vacantes encajan contigo, ${myTalentProfile.name || currentUser.name}!` : 'Completa tu Perfil de Talento')
-                                            : '¿Buscas empleo adaptado a tu especialidad?'}
+                                        {!currentUser
+                                            ? '¿Buscas empleo adaptado a tu especialidad?'
+                                            : !canHaveTalentProfile(currentUser)
+                                                ? (isEmpresaUser(currentUser) ? '¿Buscas talento para tus vacantes?' : 'Explora las Ofertas Laborales en CiPress')
+                                                : (myTalentProfile?.title ? `¡Descubre qué vacantes encajan contigo, ${myTalentProfile.name || currentUser.name}!` : 'Completa tu Perfil de Talento')}
                                     </h3>
                                     <p className="text-sm text-orange-50 leading-relaxed">
                                         {!currentUser && 'Inicia sesión con tu cuenta de periodista para que nuestro algoritmo IA analice tu trayectoria y priorice las ofertas con mayor compatibilidad editorial.'}
-                                        {currentUser && !myTalentProfile?.title && 'Aún no has configurado tu perfil de talento. Configura tus áreas y habilidades para que el algoritmo ordene las ofertas a tu medida.'}
-                                        {currentUser && myTalentProfile?.title && (
+                                        {currentUser && isEmpresaUser(currentUser) && 'Como cuenta Empresa, publica tus vacantes desde tu panel y utiliza nuestro motor IA para encontrar candidatos compatibles en el Banco de Talentos.'}
+                                        {currentUser && isClienteUser(currentUser) && 'Explora las oportunidades laborales activas dentro de la comunidad periodística de CiPress.'}
+                                        {currentUser && canHaveTalentProfile(currentUser) && !myTalentProfile?.title && 'Aún no has configurado tu perfil de talento. Configura tus áreas y habilidades para que el algoritmo ordene las ofertas a tu medida.'}
+                                        {currentUser && canHaveTalentProfile(currentUser) && myTalentProfile?.title && (
                                             talentMatchSummary && isTalentFilterActive 
                                                 ? talentMatchSummary 
                                                 : `Nuestro modelo evaluará tus competencias (${Array.isArray(myTalentProfile.skills) ? myTalentProfile.skills.slice(0, 3).join(', ') : 'periodísticas'}) contra todas las vacantes publicadas.`
@@ -796,7 +852,16 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                             <SparklesIcon className="w-4 h-4 text-orange-600" />
                                             <span>Activar Matchmaking IA</span>
                                         </button>
-                                    ) : !myTalentProfile?.title ? (
+                                    ) : isEmpresaUser(currentUser) ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => onNavigate('dashboard', 'jobs')}
+                                            className="px-6 py-3 bg-white text-orange-600 hover:bg-orange-50 font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm active:scale-95 cursor-pointer"
+                                        >
+                                            <BriefcaseIcon className="w-4 h-4 text-orange-600" />
+                                            <span>Publicar y Buscar Candidatos</span>
+                                        </button>
+                                    ) : !canHaveTalentProfile(currentUser) ? null : !myTalentProfile?.title ? (
                                         <button
                                             type="button"
                                             onClick={() => onNavigate('dashboard', 'talent')}
@@ -877,8 +942,9 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                     <h2 className="text-2xl md:text-3xl font-extrabold font-serif">Colaboraciones Urgentes</h2>
                                     <p className="text-sm text-orange-50 leading-relaxed">
                                         {!currentUser && 'Conecta al instante con colegas para asignaciones de última hora. Inicia sesión con tu perfil periodístico para que la IA priorice las pautas afines a tus áreas.'}
-                                        {currentUser && !myTalentProfile?.title && 'Configura tu Perfil de Talento para que nuestro algoritmo IA ordene las coberturas según tus áreas y disponibilidad.'}
-                                        {currentUser && myTalentProfile?.title && (
+                                        {currentUser && !canHaveTalentProfile(currentUser) && 'Publica requerimientos urgentes o revisa la disponibilidad inmediata de profesionales en la comunidad CiPress.'}
+                                        {currentUser && canHaveTalentProfile(currentUser) && !myTalentProfile?.title && 'Configura tu Perfil de Talento para que nuestro algoritmo IA ordene las coberturas según tus áreas y disponibilidad.'}
+                                        {currentUser && canHaveTalentProfile(currentUser) && myTalentProfile?.title && (
                                             talentCollabSummary && isCollabFilterActive
                                                 ? talentCollabSummary
                                                 : 'Nuestro motor IA evalúa tus competencias para sugerirte las pautas de terreno que mejor encajan con tu perfil.'
@@ -897,7 +963,7 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                             <SparklesIcon className="w-4 h-4 text-orange-600" />
                                             <span>Recomendar Pautas con IA</span>
                                         </button>
-                                    ) : !myTalentProfile?.title ? (
+                                    ) : !canHaveTalentProfile(currentUser) ? null : !myTalentProfile?.title ? (
                                         <button
                                             type="button"
                                             onClick={() => onNavigate('dashboard', 'talent')}
@@ -938,14 +1004,7 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                     {/* Botón para Publicar Colaboración Urgente */}
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            if (!currentUser) {
-                                                setIsLoginGuardOpen(true);
-                                            } else {
-                                                setEditingCollab(null);
-                                                setIsPublishCollabOpen(true);
-                                            }
-                                        }}
+                                        onClick={handleOpenPublishCollaboration}
                                         className="px-5 py-3 bg-orange-700/80 hover:bg-orange-800 text-white border border-white/20 font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-sm active:scale-95 cursor-pointer"
                                     >
                                         <PlusIcon className="w-5 h-5 text-white" />
@@ -966,13 +1025,7 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        if (!currentUser) setIsLoginGuardOpen(true);
-                                        else {
-                                            setEditingCollab(null);
-                                            setIsPublishCollabOpen(true);
-                                        }
-                                    }}
+                                    onClick={handleOpenPublishCollaboration}
                                     className="mt-5 px-6 py-2.5 bg-primary hover:bg-orange-600 text-white font-bold text-xs rounded-xl transition-all shadow-sm cursor-pointer"
                                 >
                                     Publicar el primer aviso
@@ -1028,13 +1081,7 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        if (!currentUser) setIsLoginGuardOpen(true);
-                                        else {
-                                            setEditingCollab(null);
-                                            setIsPublishCollabOpen(true);
-                                        }
-                                    }}
+                                    onClick={handleOpenPublishCollaboration}
                                     className="px-4 py-2 bg-primary hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
                                 >
                                     <PlusIcon className="w-3.5 h-3.5" />

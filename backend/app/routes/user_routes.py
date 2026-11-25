@@ -76,4 +76,5 @@ def get_one(user_id):
 @user_bp.route('/logout', methods=['POST'])
 def logout():
     session.pop('user_id', None)
+    session.pop('user_role', None)
     return jsonify({"success": True, "message": "Logout exitoso"}), 200

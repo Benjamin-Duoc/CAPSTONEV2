@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { User, PremiumSponsor, PressRelease, ShortCollaboration, Specialist, FreelanceService, Job } from '../types';
 import { initiatePayment } from '../utils/db';
+import { getNormalizedRole, isAdminUser } from '../utils/roleUtils';
 import MyProfileView from './dashboard/MyProfileView';
 import ConfianEnCipressView from './dashboard/ConfianEnCipressView';
 import RedactarComunicadoView from './dashboard/RedactarComunicadoView';
@@ -71,17 +72,17 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
     { name: 'Mi Perfil', icon: UserIcon, category: 'Mi Cuenta', visibleFor: ['all'], lockedFor: [] },
-    { name: 'Suscripción', icon: CreditCardIcon, category: 'Mi Cuenta', visibleFor: ['all'], lockedFor: [] },
+    { name: 'Suscripción', icon: CreditCardIcon, category: 'Mi Cuenta', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'administrador'], lockedFor: [] },
     
-    { name: 'Redactar Comunicado', icon: PencilSquareIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
-    { name: 'Colaboraciones Urgentes', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: ['colaborador gratis', 'colaborador'] },
-    { name: 'Mis Galerías', icon: PhotoIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
+    { name: 'Redactar Comunicado', icon: PencilSquareIcon, category: 'Mis Publicaciones', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'empresa', 'administrador'], lockedFor: [] },
+    { name: 'Colaboraciones Urgentes', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'empresa', 'administrador'], lockedFor: ['colaborador gratis', 'colaborador'] },
+    { name: 'Mis Galerías', icon: PhotoIcon, category: 'Mis Publicaciones', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'administrador'], lockedFor: [] },
     { name: 'Mis Pymes', icon: BuildingOfficeIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
     { name: 'Mis Fuentes Especializadas', icon: SparklesIcon, category: 'Mis Publicaciones', visibleFor: ['all'], lockedFor: [] },
     
-    { name: 'Confían en CiPress', icon: BuildingOfficeIcon, category: 'Área Comercial', visibleFor: ['cliente', 'empresa', 'administrador'], lockedFor: [] },
+    { name: 'Confían en CiPress', icon: BuildingOfficeIcon, category: 'Área Comercial', visibleFor: ['cliente', 'administrador'], lockedFor: [] },
     
-    { name: 'Mi Perfil de Talento', icon: UserIcon, category: 'Área Laboral', visibleFor: ['all'], lockedFor: [] },
+    { name: 'Mi Perfil de Talento', icon: UserIcon, category: 'Área Laboral', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'administrador'], lockedFor: [] },
     { name: 'Mis Servicios Freelance', icon: SparklesIcon, category: 'Área Laboral', visibleFor: ['colaborador gratis', 'colaborador premium', 'colaborador', 'administrador'], lockedFor: [] },
     { name: 'Publicar Oferta Laboral', icon: BriefcaseIcon, category: 'Área Laboral', visibleFor: ['empresa', 'administrador'], lockedFor: [] },
 ];
@@ -98,6 +99,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
 }) => {
     const [activeSection, setActiveSection] = useState<MenuSection>(initialSection);
     const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
+
+    useEffect(() => {
+        setActiveSection(initialSection);
+    }, [initialSection]);
 
     const [modalConfig, setModalConfig] = useState<{
         isOpen: boolean;
@@ -125,23 +130,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
     };
 
     // Mapeo seguro del rol (todo a lowercase)
-    const userRole = (typeof currentUser?.role === 'string' 
-        ? currentUser.role 
-        : (currentUser?.role as any)?.name || '').toLowerCase();
+    const userRole = getNormalizedRole(currentUser);
         
     // Función auxiliar para determinar visibilidad
     const isVisible = (item: MenuItem) => {
         if (item.visibleFor.includes('all')) return true;
-        if (userRole === 'administrador') return true;
+        if (isAdminUser(currentUser)) return true;
         return item.visibleFor.some(role => userRole.includes(role));
     };
 
     // Función auxiliar para determinar si está bloqueado (Freemium Upsell)
     const isLocked = (item: MenuItem) => {
-        if (userRole === 'administrador') return false;
+        if (isAdminUser(currentUser)) return false;
         
         // REGLA DE ORO: Si es Premium o Cliente, NADA está bloqueado
-        if (userRole.includes('premium') || userRole.includes('cliente')) return false;
+        if (userRole.includes('premium') || userRole === 'cliente') return false;
 
         return item.lockedFor.some(lockedRole => userRole.includes(lockedRole));
     };
@@ -166,8 +169,32 @@ const UserDashboard: React.FC<UserDashboardProps> = ({
     };
 
     const renderContent = () => {
-        const lockedItem = MENU_ITEMS.find(i => i.name === activeSection);
-        if (lockedItem && isLocked(lockedItem)) {
+        const currentMenuItem = MENU_ITEMS.find(i => i.name === activeSection);
+        if (currentMenuItem && !isVisible(currentMenuItem)) {
+            return (
+                <div className="p-8 max-w-2xl mx-auto mt-10">
+                    <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-lg text-center">
+                        <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <LockClosedIcon className="h-8 w-8 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold font-serif text-text-primary mb-2">
+                            Acceso Restringido por Rol
+                        </h3>
+                        <p className="text-sm text-text-secondary mb-6">
+                            La sección "{activeSection}" no está habilitada para tu tipo de cuenta ({currentUser?.role}).
+                        </p>
+                        <button
+                            onClick={() => setActiveSection('Mi Perfil')}
+                            className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-orange-600 transition-colors cursor-pointer"
+                        >
+                            Ir a Mi Perfil
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (currentMenuItem && isLocked(currentMenuItem)) {
             return (
                 <div className="p-8 max-w-2xl mx-auto mt-10">
                     <div className="bg-white p-8 rounded-2xl border-2 border-primary shadow-2xl relative overflow-hidden text-center">

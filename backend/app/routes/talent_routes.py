@@ -8,6 +8,10 @@ talent_bp = Blueprint('talent', __name__, url_prefix='/api/talent-profiles')
 profile_schema = TalentProfileSchema()
 profiles_schema = TalentProfileSchema(many=True)
 
+def _is_premium_or_admin(role):
+    r = (role or '').lower()
+    return ('premium' in r) or ('administrador' in r)
+
 @talent_bp.route('', methods=['GET'])
 def get_all_profiles():
     # JOIN with User to get the role for sorting and identification
@@ -32,7 +36,7 @@ def get_all_profiles():
     list_data = []
     for profile, role in results:
         data = profile_schema.dump(profile)
-        data['isPremium'] = (role == 'Colaborador Premium')
+        data['isPremium'] = _is_premium_or_admin(role)
         list_data.append(data)
         
     return jsonify(list_data), 200
@@ -51,7 +55,7 @@ def get_my_profile():
     data = profile_schema.dump(profile)
     # Check if user is premium to inform the frontend
     user = User.query.get(user_id)
-    data['isPremium'] = (user.role == 'Colaborador Premium') if user else False
+    data['isPremium'] = _is_premium_or_admin(user.role) if user else False
     
     return jsonify(data), 200
 
@@ -87,7 +91,7 @@ def save_my_profile():
         # Devolver perfil enriquecido
         res_data = profile_schema.dump(profile)
         user = User.query.get(user_id)
-        res_data['isPremium'] = (user.role == 'Colaborador Premium') if user else False
+        res_data['isPremium'] = _is_premium_or_admin(user.role) if user else False
         
         return jsonify(res_data), 200
     except Exception as e:
