@@ -32,7 +32,7 @@ El sistema está construido bajo una **arquitectura desacoplada fullstack**:
 
 ## ⚙️ Alcance y Módulos del Ecosistema
 
-1. **📰 Portal Editorial y Portada Inteligente:** Algoritmo horario de rotación *"Prime Time"* (08:00 a 12:00 hrs) que prioriza contenidos de alta relevancia e investigaciones de miembros Premium.
+1. **📰 Portal Editorial y Portada Inteligente:** Algoritmo horario de rotación *"Prime Time"* (08:00 a 12:00 hrs y 18:00 a 22:00 hrs) que prioriza contenidos de Colaboradores Premium, y vitrina nocturna (00:00 a 08:00 hrs y 22:00 a 24:00 hrs) para Colaboradores Gratuitos. Ver [Documentación Detallada de Prime Time](PRIME_TIME.md).
 2. **✍️ Sala de Prensa y Editor de Bloques:** Entorno de redacción modular para periodistas con bloques de texto, citas destacadas, epígrafes y asistencia de redacción inteligente integrada.
 3. **📸 Fotoperiodismo y Marketplace Visual:** Publicación y venta de fotografías con inyección automática de marcas de agua digitales (Watermarking) para proteger los derechos de autor antes del licenciamiento comercial.
 4. **💼 Mercado Laboral y Banco de Talentos:** Directorio filtrable de periodistas y fotoperiodistas por especialidad, región y experiencia, con destaque visual prioritario para usuarios con membresía activa.
@@ -173,7 +173,23 @@ El script de población (`create-db.py`) deja habilitados los siguientes usuario
 
 ---
 
-## 🤖 Guía de Uso del Asistente de Inteligencia Artificial (CiPress IA)
+## ⏰ Algoritmo de Rotación Editorial y Vitrina Prime Time
+
+El sistema implementa un algoritmo horario automatizado en el backend para gestionar la visibilidad de los comunicados de prensa en la portada principal (sección *"Periodistas en Acción"*), equilibrando los beneficios comerciales de los suscriptores de pago con el apoyo a comunicadores gratuitos:
+
+| Franja Horaria | Clasificación | Regla de Visualización en Portada |
+| :--- | :--- | :--- |
+| **08:00 a 12:00 hrs** y **18:00 a 22:00 hrs** | **Prime Time (Alta Audiencia)** | **100% Prioridad a Colaboradores Premium** (4 de 4 artículos destacados). |
+| **00:00 a 08:00 hrs** y **22:00 a 24:00 hrs** | **Horarios Menos Vistos (Valle / Noche)** | **100% Prioridad a Colaboradores Gratuitos** (Vitrina nocturna rotativa). |
+| **12:00 a 18:00 hrs** | **Horario Regular / Intermedio** | **Rotación Equitativa**: 2 artículos de Colaboradores Premium y 2 artículos de Colaboradores Gratuitos. |
+
+### Características Principales:
+* **Endpoints:** `GET /api/featured-content` (entrega los 4 artículos) y `GET /api/featured-content/status` (metadatos del modo activo).
+* **Parámetro de Simulación en Vivo (`?sim_hour=0..23`):** Permite simular cualquier hora del día ante la comisión evaluadora (ejemplo: `http://localhost:5000/api/featured-content?sim_hour=9` para Prime Time o `?sim_hour=2` para Horario Valle nocturno).
+* **Distinción Visual en Portada:** Etiquetas distintivas `★ Prime Time` para notas Premium y `🌙 Colaborador` para notas Gratuitas, además de un indicador de estado dinámico en el encabezado de la sección.
+* 📖 Consulta la documentación técnica completa en **[PRIME_TIME.md](PRIME_TIME.md)**.
+
+---
 
 CiPress incorpora un asistente editorial impulsado por modelos avanzados de lenguaje de **Google Gemini**, diseñado específicamente para agilizar la labor de reporteros y comunicadores.
 
