@@ -46,6 +46,7 @@ interface HomePageProps {
     sponsoredAds: SponsoredAd[];
     specialAds: SpecialAd[];
     stats: SiteStat[];
+    onAddPressRelease?: (pr: Omit<PressRelease, 'id'>) => Promise<boolean> | boolean;
     onAddSpecialist?: (specialist: Omit<Specialist, 'id' | 'dateAdded'>) => void;
     rotationInterval?: number;
 }
@@ -217,15 +218,37 @@ const PremiumBannerCard: React.FC<{ sponsor: PremiumSponsor; onClick: () => void
 );
 
 
-const NewsCard: React.FC<{ article: Omit<NewsArticle, 'category'> & { category: string }; onClick: () => void }> = ({ article, onClick }) => (
-    <button onClick={onClick} className="bg-surface p-4 rounded-lg group block border border-gray-200 hover:shadow-lg transition-shadow duration-300 text-left w-full">
-        <div className="overflow-hidden rounded-md">
-            <img src={article.imageUrl || DEFAULT_IMAGE} alt={article.title} onError={handleImageError} className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300" />
-        </div >
-        <span className="text-xs font-bold uppercase text-primary mt-4 inline-block">{article.category}</span>
-        <h3 className="font-semibold font-serif text-text-primary mt-1 group-hover:text-primary transition-colors">{article.title}</h3>
-    </button >
-);
+const NewsCard: React.FC<{ article: Omit<NewsArticle, 'category'> & { category: string; authorRole?: string }; onClick: () => void }> = ({ article, onClick }) => {
+    const isPremium = article.authorRole?.toLowerCase().includes('premium');
+    const isGratis = article.authorRole?.toLowerCase().includes('gratis');
+
+    return (
+        <button onClick={onClick} className="bg-surface p-4 rounded-lg group block border border-gray-200 hover:shadow-lg transition-shadow duration-300 text-left w-full relative">
+            <div className="overflow-hidden rounded-md relative">
+                <img src={article.imageUrl || DEFAULT_IMAGE} alt={article.title} onError={handleImageError} className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300" />
+                {isPremium && (
+                    <span className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                        ★ Prime Time
+                    </span>
+                )}
+                {isGratis && (
+                    <span className="absolute top-2 right-2 bg-slate-800/85 backdrop-blur-xs text-emerald-300 text-[10px] font-medium px-2 py-0.5 rounded shadow-sm flex items-center gap-1">
+                        🌙 Colaborador
+                    </span>
+                )}
+            </div>
+            <div className="flex items-center justify-between mt-4">
+                <span className="text-xs font-bold uppercase text-primary inline-block">{article.category}</span>
+                {article.authorRole && (
+                    <span className="text-[11px] font-medium text-text-secondary">
+                        {article.authorRole}
+                    </span>
+                )}
+            </div>
+            <h3 className="font-semibold font-serif text-text-primary mt-1 group-hover:text-primary transition-colors line-clamp-2">{article.title}</h3>
+        </button>
+    );
+};
 
 const VideoCard: React.FC<{ video: PromoVideo }> = ({ video }) => (
     <a href="#" className="bg-surface rounded-lg group block border border-gray-200 hover:shadow-lg transition-shadow duration-300 overflow-hidden">
@@ -693,6 +716,13 @@ const HomePage: React.FC<HomePageProps> = (props) => {
 
     // Featured Content (Time-based strict rotation from Backend)
     const [featuredPressReleases, setFeaturedPressReleases] = useState<PressRelease[]>([]);
+    const [primeTimeStatus, setPrimeTimeStatus] = useState<{
+        currentHour: number;
+        isPrimeTime: boolean;
+        isOffPeak: boolean;
+        mode: string;
+        label: string;
+    } | null>(null);
 
     useEffect(() => {
         const fetchFeatured = async () => {
@@ -701,6 +731,12 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                 if (response.ok) {
                     const data = await response.json();
                     setFeaturedPressReleases(transformList<PressRelease>(keysToCamel(data)));
+                }
+
+                const statusRes = await fetch(`${API_BASE}/featured-content/status`);
+                if (statusRes.ok) {
+                    const statusData = await statusRes.json();
+                    setPrimeTimeStatus(keysToCamel(statusData));
                 }
             } catch (err) {
                 console.error("Error fetching featured content:", err);
@@ -745,7 +781,11 @@ const HomePage: React.FC<HomePageProps> = (props) => {
 
     const handlePressReleaseSubmit = async (pr: Omit<PressRelease, 'id'>) => {
         if (onAddPressRelease) {
-            const success = await onAddPressRelease(pr);
+            const prWithAuthor = {
+                ...pr,
+                authorUserId: currentUser?.id
+            };
+            const success = await onAddPressRelease(prWithAuthor);
             if (success) {
                 showAlert('Comunicado Enviado', '¡Tu comunicado ha sido enviado con éxito a CiPress!', 'success');
                 setIsPressReleaseModalOpen(false);
@@ -1114,10 +1154,27 @@ const HomePage: React.FC<HomePageProps> = (props) => {
 
                         {/* Periodistas en acción */}
                         <section>
-                            <div className="flex justify-between items-center border-b-2 border-secondary pb-2 mb-6">
-                                <h2 className="text-3xl font-bold font-serif text-text-primary">Periodistas en Acción</h2>
-                                <button onClick={() => onNavigate('press-releases')} className="font-semibold text-secondary hover:underline">Ver todo &rarr;</button>
-                                {isAdminMode && <AdminButton onClick={() => onNavigate('admin', 'pressReleases')} />}
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-secondary pb-3 mb-6 gap-3">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h2 className="text-3xl font-bold font-serif text-text-primary">Periodistas en Acción</h2>
+                                    {primeTimeStatus?.isPrimeTime ? (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs">
+                                            ★ Prime Time (08:00-12:00 / 18:00-22:00) · Colaboradores Premium
+                                        </span>
+                                    ) : primeTimeStatus?.isOffPeak ? (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs">
+                                            🌙 Horario Valle · Vitrina Colaboradores Gratuitos
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                            ☀️ Horario Regular · Rotación Mixta
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => onNavigate('press-releases')} className="font-semibold text-secondary hover:underline text-sm">Ver todo &rarr;</button>
+                                    {isAdminMode && <AdminButton onClick={() => onNavigate('admin', 'pressReleases')} />}
+                                </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {featuredPressReleases.length > 0 ? (
@@ -1127,6 +1184,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
                                             article={{
                                                 ...release,
                                                 category: release.institution,
+                                                authorRole: release.authorRole
                                             }}
                                             onClick={() => onSelectPressRelease(release)}
                                         />

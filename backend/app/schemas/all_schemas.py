@@ -40,6 +40,7 @@ from datetime import datetime
 
 class PressReleaseSchema(ma.SQLAlchemyAutoSchema):
     is_public_visible = fields.Method("get_is_public_visible")
+    author_role = fields.Method("get_author_role")
 
     def get_is_public_visible(self, obj):
         from app.models.all_models import User
@@ -47,9 +48,14 @@ class PressReleaseSchema(ma.SQLAlchemyAutoSchema):
         if user and user.role and ('premium' in user.role.lower() or 'administrador' in user.role.lower()):
             return True
         current_hour = datetime.now().hour
-        if 0 <= current_hour < 8:
+        if (0 <= current_hour < 8) or (22 <= current_hour < 24):
             return True
         return False
+
+    def get_author_role(self, obj):
+        from app.models.all_models import User
+        user = User.query.get(obj.author_user_id) if getattr(obj, 'author_user_id', None) else None
+        return user.role if user else 'Colaborador Gratis'
 
     class Meta:
         model = PressRelease

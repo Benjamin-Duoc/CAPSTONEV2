@@ -73,6 +73,18 @@ def create_db():
                 region=u_data["region"],
                 password_hash=password_123
             ))
+        db.session.commit()
+
+        # Obtener IDs dinámicos de los colaboradores
+        juan_user = User.query.filter_by(email="premium@colab.com").first()
+        pia_user = User.query.filter_by(email="pia@premium.cl").first()
+        pedro_user = User.query.filter_by(email="gratis@colab.com").first()
+        gaby_user = User.query.filter_by(email="gaby@gratis.cl").first()
+
+        juan_id = juan_user.id if juan_user else 5
+        pia_id = pia_user.id if pia_user else 6
+        pedro_id = pedro_user.id if pedro_user else 7
+        gaby_id = gaby_user.id if gaby_user else 8
 
         # --- HERO HEADING ---
         db.session.add(HeroHeading(
@@ -241,24 +253,107 @@ def create_db():
         for a in articles:
             db.session.add(NewsArticle(**a))
 
-        # --- PRESS RELEASES ---
+        # --- PRESS RELEASES (Prime Time vs Horario Valle) ---
         prs = [
+            # --- ARTÍCULOS COLABORADORES PREMIUM (Visibilidad Prime Time: 08:00-12:00 / 18:00-22:00) ---
             {
-                "author_user_id": 1,
-                "title": "Gobierno Regional Lanza Nueva Plataforma de Transparencia Activa",
-                "institution": "Gobierno Regional Metropolitano", "author": "Comunicaciones GORE", "date": "20 de Julio, 2024",
+                "author_user_id": juan_id, # Juan Premium
+                "title": "Investigación Exclusiva: El Futuro del Litio y la Minería Sustentable en el Norte",
+                "institution": "CiPress Investigaciones", "author": "Juan Premium - Reportaje Especial", "date": "20 de Noviembre, 2026",
                 "image_url": "https://picsum.photos/seed/pr1/400/225",
-                "summary": "La nueva herramienta digital busca acercar la gestión pública a la ciudadanía.",
-                "report_author": "Equipo GORE", "report_date": "20 de Julio, 2024",
+                "summary": "Un análisis en terreno sobre los salares del norte grande, las comunidades atacameñas y la transición energética global.",
+                "report_author": "Juan Premium", "report_date": "2026-11-20",
                 "report_content": json.dumps([
-                    {"type": "paragraph", "text": "El Gobierno Regional Metropolitano ha dado un paso significativo..."},
-                    {"type": "quote", "text": "La confianza de la ciudadanía se construye con hechos.", "author": "Gobernador Regional"}
+                    {"type": "paragraph", "text": "En el corazón del desierto de Atacama, la extracción de salmuera plantea una encrucijada crucial entre el desarrollo de baterías para la electromovilidad y la preservación de acuíferos ancestrales."},
+                    {"type": "quote", "text": "El valor del litio no puede medirse solo en divisas, sino en la sustentabilidad de los territorios.", "author": "Juan Premium"}
                 ])
             },
-            {"title": "Start-Up Chile Abre Convocatoria para su Generación 2024", "institution": "CORFO", "author": "Prensa CORFO", "date": "19 de Julio, 2024", "image_url": "https://picsum.photos/seed/pr2/400/225", "summary": "El programa busca atraer a los mejores emprendimientos tecnológicos."},
-            {"title": "Museo de la Memoria Inaugura Exposición", "institution": "Museo de la Memoria", "author": "Cultura y Prensa MMDH", "date": "18 de Julio, 2024", "image_url": "https://picsum.photos/seed/pr3/400/225", "summary": "La muestra 'La Tinta no se Borra' recorre la historia de los medios."},
-            {"title": "Festival de Innovación Social fiiS 2024", "institution": "Festival fiiS", "author": "Equipo fiiS", "date": "17 de Julio, 2024", "image_url": "https://picsum.photos/seed/pr4/400/225", "summary": "Líderes de opinión se darán cita en el evento."},
-            {"title": "Informe sobre brecha digital en Chile", "institution": "Fundación Datos Protegidos", "author": "Comunicaciones FDP", "date": "16 de Julio, 2024", "image_url": "https://picsum.photos/seed/pr5/400/225", "summary": "El estudio revela que un 30% de los hogares rurales no tiene acceso a internet."}
+            {
+                "author_user_id": pia_id, # Pía Premium
+                "title": "Start-Up Chile Abre Convocatoria para su Generación 2026 de Innovación",
+                "institution": "CORFO / Start-Up Chile", "author": "Pía Premium - Prensa Innovación", "date": "19 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/pr2/400/225",
+                "summary": "El programa de aceleración de negocios líder en Latinoamérica busca atraer emprendimientos tecnológicos de alto impacto cívico y mediático.",
+                "report_author": "Pía Premium", "report_date": "2026-11-19",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "Con un fondo de financiamiento de hasta 50 millones de pesos por proyecto, la iniciativa abre sus puertas a comunicadores y desarrolladores."},
+                    {"type": "quote", "text": "El ecosistema emprendedor chileno sigue atrayendo talento de todo el continente.", "author": "Dirección de Innovación"}
+                ])
+            },
+            {
+                "author_user_id": juan_id, # Juan Premium
+                "title": "Festival fiiS 2026: Economía Circular y Nuevos Medios Independientes",
+                "institution": "Festival fiiS", "author": "Juan Premium - Cobertura Especial", "date": "18 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/pr4/400/225",
+                "summary": "Líderes de opinión, comunicadores y agentes de cambio se dan cita en Santiago para debatir el rol del periodismo en la cohesión social.",
+                "report_author": "Juan Premium", "report_date": "2026-11-18",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "El encuentro reúne a más de 30 expositores internacionales del mundo de la cultura, la tecnología y el desarrollo comunitario."},
+                    {"type": "quote", "text": "Comunicar con sentido es el verdadero desafío de la era digital.", "author": "Comité fiiS"}
+                ])
+            },
+            {
+                "author_user_id": pia_id, # Pía Premium
+                "title": "Reportaje Especial: Energías Renovables y Descarbonización en la Matriz 2026",
+                "institution": "CiPress Energía", "author": "Pía Premium - Periodismo de Investigación", "date": "17 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/pr3/400/225",
+                "summary": "Chile supera el 60% de generación eléctrica con fuentes solares y eólicas, acelerando el cierre de termoeléctricas a carbón.",
+                "report_author": "Pía Premium", "report_date": "2026-11-17",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "La transformación de la matriz energética sitúa al país como referente en el Cono Sur, impulsando inversiones en líneas de transmisión."},
+                    {"type": "quote", "text": "La descarbonización es una realidad que redefine nuestra economía regional.", "author": "Pía Premium"}
+                ])
+            },
+
+            # --- ARTÍCULOS COLABORADORES GRATUITOS (Visibilidad Horarios Menos Vistos / Valle: 00:00-08:00 / 22:00-24:00) ---
+            {
+                "author_user_id": pedro_id, # Pedro Gratis
+                "title": "Vecinos de Concepción Impulsan Huertos Urbanos y Redes Comunitarias",
+                "institution": "Red Comunitaria Biobío", "author": "Pedro Gratis - Corresponsalía Regional", "date": "16 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/pr5/400/225",
+                "summary": "Dirigentes sociales del Gran Concepción recuperan sitios eriazos para cultivar alimentos orgánicos y fomentar el trabajo asociativo.",
+                "report_author": "Pedro Gratis", "report_date": "2026-11-16",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "La iniciativa barrial reúne a más de 40 familias en torno a la soberanía alimentaria y la educación ambiental en plazas públicas."},
+                    {"type": "quote", "text": "Cada metro cuadrado cultivado es un espacio ganado para la vida de barrio.", "author": "Coordinadora Vecinal"}
+                ])
+            },
+            {
+                "author_user_id": gaby_id, # Gaby Gratis
+                "title": "Jóvenes de Coronel Crean Taller de Comunicación Popular y Radio Vecinal",
+                "institution": "Colectivo Juvenil Biobío", "author": "Gaby Gratis - Prensa Comunitaria", "date": "15 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/ngo3/400/225",
+                "summary": "Estudiantes de liceos públicos lanzan podcast y cápsulas informativas para visibilizar las demandas socioambientales de su comuna.",
+                "report_author": "Gaby Gratis", "report_date": "2026-11-15",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "Con micrófonos comunitarios y software libre, el taller capacita a jóvenes en locución, reportería callejera y edición digital."},
+                    {"type": "quote", "text": "Queremos que Coronel tenga su propia voz en los medios.", "author": "Gaby Gratis"}
+                ])
+            },
+            {
+                "author_user_id": pedro_id, # Pedro Gratis
+                "title": "Museo de la Memoria Inaugura Exposición Fotográfica 'Testimonio Vivo'",
+                "institution": "Museo de la Memoria", "author": "Pedro Gratis - Cultura Local", "date": "14 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/pr3/400/225",
+                "summary": "La muestra recopila más de 80 imágenes inéditas capturadas por reporteros gráficos independientes durante los últimos cuarenta años.",
+                "report_author": "Pedro Gratis", "report_date": "2026-11-14",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "El archivo fotográfico rinde tributo a quienes registraron con su lente los momentos históricos más sensibles de la vida republicana."},
+                    {"type": "quote", "text": "La fotografía documental es la memoria viva de nuestra identidad.", "author": "Curaduría MMDH"}
+                ])
+            },
+            {
+                "author_user_id": gaby_id, # Gaby Gratis
+                "title": "Informe Local: Brecha Digital y Acceso a Internet en Zonas Rurales del Biobío",
+                "institution": "Fundación Datos Protegidos", "author": "Gaby Gratis - Prensa Social", "date": "13 de Noviembre, 2026",
+                "image_url": "https://picsum.photos/seed/pr1/400/225",
+                "summary": "Un estudio revela que el 28% de las familias campesinas depende de conectividad intermitente para trámites esenciales y educación.",
+                "report_author": "Gaby Gratis", "report_date": "2026-11-13",
+                "report_content": json.dumps([
+                    {"type": "paragraph", "text": "Dirigentes rurales exigen inversión pública en antenas de telecomunicaciones y subsidios de banda ancha satelital para zonas aisladas."},
+                    {"type": "quote", "text": "Sin internet hoy no se puede estudiar ni vender la cosecha.", "author": "Unión Comunal"}
+                ])
+            }
         ]
         for pr in prs:
             db.session.add(PressRelease(**pr))
@@ -683,8 +778,8 @@ def create_db():
 
         # --- TALENT PROFILES ---
         talents = [
-            {"user_id": 4, "name": "Juan Premium", "title": "Periodista de Investigación Senior", "skills": ["Investigación Corrupción", "Data Mining", "Reporteo Local"], "availability": "Remoto", "region": "Valparaíso", "expected_salary": "$2.200.000 CLP", "experience_years": 12, "avatar_url": "https://i.pravatar.cc/150?u=4"},
-            {"user_id": 5, "name": "Pedro Gratis", "title": "Redactor Junior", "skills": ["SEO", "Redacción Creativa"], "availability": "Híbrido", "region": "Biobío", "expected_salary": "$800.000 CLP", "experience_years": 2, "avatar_url": "https://i.pravatar.cc/150?u=5"},
+            {"user_id": juan_id, "name": "Juan Premium", "title": "Periodista de Investigación Senior", "skills": ["Investigación Corrupción", "Data Mining", "Reporteo Local"], "availability": "Remoto", "region": "Valparaíso", "expected_salary": "$2.200.000 CLP", "experience_years": 12, "avatar_url": "https://i.pravatar.cc/150?u=4"},
+            {"user_id": pedro_id, "name": "Pedro Gratis", "title": "Redactor Junior", "skills": ["SEO", "Redacción Creativa"], "availability": "Híbrido", "region": "Biobío", "expected_salary": "$800.000 CLP", "experience_years": 2, "avatar_url": "https://i.pravatar.cc/150?u=5"},
             {"name": "Javiera Latorre", "title": "Periodista de datos (Demo)", "skills": ["Análisis de Datos", "Investigación"], "availability": "Remoto", "region": "Metropolitana", "expected_salary": "$1.500.000 CLP", "experience_years": 5, "avatar_url": "https://i.pravatar.cc/150?u=10"}
         ]
         for tp in talents:

@@ -95,6 +95,7 @@ export interface NewsArticle {
 export interface PressRelease {
     id: number;
     authorUserId?: number;
+    authorRole?: string;
     title: string;
     institution: string;
     author: string;
