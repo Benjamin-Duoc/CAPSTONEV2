@@ -391,7 +391,50 @@ class AIService:
             "source": "cipress_local_heuristics"
         }
 
-    def matchmaking(self, collaboration: dict, candidate_profiles: list = None) -> dict:
+    @staticmethod
+    def _extract_int_id(*values):
+        for v in values:
+            if v is None or v == "":
+                continue
+            try:
+                return int(v)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    @classmethod
+    def _collect_user_ids(cls, source: dict, id_keys: tuple, acting_user_id=None) -> set:
+        """Recopila los user_id asociados al emisor de la búsqueda para excluir auto-coincidencias."""
+        ids = set()
+        if source:
+            uid = cls._extract_int_id(*(source.get(k) for k in id_keys))
+            if uid is not None:
+                ids.add(uid)
+        acting_uid = cls._extract_int_id(acting_user_id)
+        if acting_uid is not None:
+            ids.add(acting_uid)
+        return ids
+
+    @classmethod
+    def _filter_out_self_records(cls, items: list, excluded_user_ids: set, id_keys: tuple, excluded_names: set = None) -> list:
+        """Excluye candidatos o publicaciones pertenecientes al propio usuario solicitante."""
+        if not items:
+            return []
+        clean_names = {str(n).strip().lower() for n in (excluded_names or set()) if n and str(n).strip()}
+        filtered = []
+        for item in items:
+            item_uid = cls._extract_int_id(*(item.get(k) for k in id_keys))
+            if item_uid is not None and item_uid in excluded_user_ids:
+                continue
+            # Respaldo por nombre exacto solo cuando el registro carece de user_id vinculado
+            if item_uid is None and clean_names:
+                item_name = (item.get('name') or item.get('author') or '').strip().lower()
+                if item_name and item_name in clean_names:
+                    continue
+            filtered.append(item)
+        return filtered
+
+    def matchmaking(self, collaboration: dict, candidate_profiles: list = None, acting_user_id=None) -> dict:
         """
         Realiza el emparejamiento semántico entre un pedido urgente de colaboración
         y los perfiles profesionales registrados en el Banco de Talentos.
@@ -412,10 +455,22 @@ class AIService:
                 logger.warning(f"Error cargando perfiles para matchmaking: {e}")
                 candidate_profiles = []
 
+        excluded_uids = self._collect_user_ids(
+            collaboration,
+            ('author_user_id', 'authorUserId', 'user_id', 'userId'),
+            acting_user_id=acting_user_id
+        )
+        candidate_profiles = self._filter_out_self_records(
+            candidate_profiles,
+            excluded_uids,
+            ('user_id', 'userId'),
+            excluded_names={collaboration.get('author')}
+        )
+
         if not candidate_profiles:
             return {
                 "status": "success",
-                "summary": "No hay perfiles registrados actualmente en el Banco de Talentos para realizar el emparejamiento.",
+                "summary": "No hay otros perfiles registrados en el Banco de Talentos para realizar el emparejamiento.",
                 "matches": [],
                 "source": "local"
             }
@@ -515,14 +570,17 @@ class AIService:
         }
 
     def _enrich_matches(self, matches: list, original_profiles: list) -> list:
-        """Enriquece los resultados de Gemini con fotos de avatar y datos de los perfiles."""
+        """Enriquece los resultados de Gemini con fotos de avatar y datos de los perfiles permitidos."""
         profiles_by_id = {p.get('id'): p for p in original_profiles if p.get('id')}
         enriched = []
         for m in matches:
-            orig = profiles_by_id.get(m.get('talent_id'), {})
+            tid = m.get('talent_id')
+            if tid not in profiles_by_id:
+                continue
+            orig = profiles_by_id[tid]
             enriched.append({
                 **m,
-                "avatar_url": orig.get('avatar_url') or f"https://i.pravatar.cc/150?u={m.get('talent_id', 1)}",
+                "avatar_url": orig.get('avatar_url') or f"https://i.pravatar.cc/150?u={tid or 1}",
                 "linkedin_url": orig.get('linkedin_url', ''),
                 "is_premium": bool(orig.get('is_premium') or orig.get('isPremium'))
             })
@@ -619,7 +677,7 @@ class AIService:
             "matches": top_matches
         }
 
-    def matchmaking_job_to_talents(self, job: dict, candidate_profiles: list = None) -> dict:
+    def matchmaking_job_to_talents(self, job: dict, candidate_profiles: list = None, acting_user_id=None) -> dict:
         """
         Realiza el emparejamiento semántico entre una Oferta Laboral (Job)
         y los perfiles profesionales registrados en el Banco de Talentos.
@@ -643,10 +701,21 @@ class AIService:
                 logger.warning(f"Error cargando perfiles para job-to-talents: {e}")
                 candidate_profiles = []
 
+        excluded_uids = self._collect_user_ids(
+            job,
+            ('user_id', 'userId', 'author_user_id', 'authorUserId'),
+            acting_user_id=acting_user_id
+        )
+        candidate_profiles = self._filter_out_self_records(
+            candidate_profiles,
+            excluded_uids,
+            ('user_id', 'userId')
+        )
+
         if not candidate_profiles:
             return {
                 "status": "success",
-                "summary": "No hay perfiles registrados en el Banco de Talentos para realizar el emparejamiento.",
+                "summary": "No hay otros perfiles registrados en el Banco de Talentos para realizar el emparejamiento.",
                 "matches": [],
                 "source": "local"
             }
@@ -814,7 +883,7 @@ class AIService:
             "matches": top
         }
 
-    def matchmaking_talent_to_jobs(self, talent_profile: dict, jobs: list = None) -> dict:
+    def matchmaking_talent_to_jobs(self, talent_profile: dict, jobs: list = None, acting_user_id=None) -> dict:
         """
         Realiza el emparejamiento semántico entre el perfil de un Periodista (TalentProfile)
         y la lista de ofertas laborales activas en CiPress.
@@ -838,10 +907,21 @@ class AIService:
                 logger.warning(f"Error cargando jobs para talent-to-jobs: {e}")
                 jobs = []
 
+        excluded_uids = self._collect_user_ids(
+            talent_profile,
+            ('user_id', 'userId'),
+            acting_user_id=acting_user_id
+        )
+        jobs = self._filter_out_self_records(
+            jobs,
+            excluded_uids,
+            ('user_id', 'userId', 'author_user_id', 'authorUserId')
+        )
+
         if not jobs:
             return {
                 "status": "success",
-                "summary": "No hay ofertas laborales activas en este momento.",
+                "summary": "No hay ofertas laborales de terceros activas en este momento.",
                 "matches": [],
                 "source": "local"
             }
@@ -916,12 +996,14 @@ class AIService:
                             clean_json = clean_json.strip()
 
                             parsed = json.loads(clean_json)
+                            allowed_job_ids = {j.get('id') for j in jobs if j.get('id') is not None}
+                            valid_matches = [m for m in parsed.get('matches', []) if m.get('job_id') in allowed_job_ids]
                             return {
                                 "status": "success",
                                 "source": "gemini",
                                 "model": model_name,
                                 "summary": parsed.get('summary', 'Ofertas seleccionadas según tu perfil periodístico.'),
-                                "matches": parsed.get('matches', [])
+                                "matches": valid_matches
                             }
                 except Exception as e:
                     logger.warning(f"Error en matchmaking_talent_to_jobs con Gemini ({model_name}): {e}")
@@ -983,7 +1065,7 @@ class AIService:
             "matches": scored
         }
 
-    def matchmaking_talent_to_collaborations(self, talent_profile: dict, collaborations: list = None) -> dict:
+    def matchmaking_talent_to_collaborations(self, talent_profile: dict, collaborations: list = None, acting_user_id=None) -> dict:
         """
         Realiza el emparejamiento semántico entre el perfil de un Periodista (TalentProfile)
         y la lista de colaboraciones urgentes activas en CiPress.
@@ -1007,10 +1089,22 @@ class AIService:
                 logger.warning(f"Error cargando colaboraciones para talent-to-collabs: {e}")
                 collaborations = []
 
+        excluded_uids = self._collect_user_ids(
+            talent_profile,
+            ('user_id', 'userId'),
+            acting_user_id=acting_user_id
+        )
+        collaborations = self._filter_out_self_records(
+            collaborations,
+            excluded_uids,
+            ('author_user_id', 'authorUserId', 'user_id', 'userId'),
+            excluded_names={talent_profile.get('name')}
+        )
+
         if not collaborations:
             return {
                 "status": "success",
-                "summary": "No hay colaboraciones urgentes activas en este momento.",
+                "summary": "No hay colaboraciones urgentes de otros usuarios activas en este momento.",
                 "matches": [],
                 "source": "local"
             }
@@ -1082,12 +1176,14 @@ class AIService:
                             clean_json = clean_json.strip()
 
                             parsed = json.loads(clean_json)
+                            allowed_collab_ids = {c.get('id') for c in collaborations if c.get('id') is not None}
+                            valid_matches = [m for m in parsed.get('matches', []) if m.get('collab_id') in allowed_collab_ids]
                             return {
                                 "status": "success",
                                 "source": "gemini",
                                 "model": model_name,
                                 "summary": parsed.get('summary', 'Colaboraciones recomendadas para tu perfil.'),
-                                "matches": parsed.get('matches', [])
+                                "matches": valid_matches
                             }
                 except Exception as e:
                     logger.warning(f"Error en matchmaking_talent_to_collaborations con Gemini ({model_name}): {e}")

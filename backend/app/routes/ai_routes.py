@@ -4,7 +4,7 @@ Endpoints for text generation, refinement, translation and formatting.
 """
 
 import os
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, session
 from app.services.ai_service import AIService
 
 ai_bp = Blueprint('ai_routes', __name__, url_prefix='/api/ai')
@@ -111,9 +111,10 @@ def matchmaking():
     data = request.get_json() or {}
     collaboration = data.get('collaboration') or {}
     candidate_profiles = data.get('candidate_profiles')
+    acting_user_id = session.get('user_id')
     api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
     service = AIService(api_key)
-    response = service.matchmaking(collaboration, candidate_profiles)
+    response = service.matchmaking(collaboration, candidate_profiles, acting_user_id=acting_user_id)
     return jsonify(response), 200
 
 @ai_bp.route('/matchmaking/job-to-talents', methods=['POST'])
@@ -124,9 +125,10 @@ def matchmaking_job_to_talents():
     data = request.get_json() or {}
     job = data.get('job') or {}
     candidate_profiles = data.get('candidate_profiles')
+    acting_user_id = session.get('user_id')
     api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
     service = AIService(api_key)
-    response = service.matchmaking_job_to_talents(job, candidate_profiles)
+    response = service.matchmaking_job_to_talents(job, candidate_profiles, acting_user_id=acting_user_id)
     return jsonify(response), 200
 
 @ai_bp.route('/matchmaking/talent-to-jobs', methods=['POST'])
@@ -137,9 +139,10 @@ def matchmaking_talent_to_jobs():
     data = request.get_json() or {}
     talent_profile = data.get('talent_profile') or {}
     jobs = data.get('jobs')
+    acting_user_id = session.get('user_id')
     api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
     service = AIService(api_key)
-    response = service.matchmaking_talent_to_jobs(talent_profile, jobs)
+    response = service.matchmaking_talent_to_jobs(talent_profile, jobs, acting_user_id=acting_user_id)
     return jsonify(response), 200
 
 @ai_bp.route('/matchmaking/talent-to-collaborations', methods=['POST'])
@@ -150,7 +153,8 @@ def matchmaking_talent_to_collaborations():
     data = request.get_json() or {}
     talent_profile = data.get('talent_profile') or {}
     collaborations = data.get('collaborations')
+    acting_user_id = session.get('user_id')
     api_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
     service = AIService(api_key)
-    response = service.matchmaking_talent_to_collaborations(talent_profile, collaborations)
+    response = service.matchmaking_talent_to_collaborations(talent_profile, collaborations, acting_user_id=acting_user_id)
     return jsonify(response), 200

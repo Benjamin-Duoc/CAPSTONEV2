@@ -612,11 +612,15 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
 
         setIsMatchingTalentToJobs(true);
         try {
-            const res = await runTalentToJobsMatchmaking(myTalentProfile, jobs);
+            const eligibleJobs = jobs.filter(j => j.userId !== currentUser.id && j.authorUserId !== currentUser.id);
+            const eligibleIds = new Set(eligibleJobs.map(j => j.id));
+            const res = await runTalentToJobsMatchmaking(myTalentProfile, eligibleJobs);
             if (res && res.matches) {
                 const map: Record<number, TalentJobMatch> = {};
                 res.matches.forEach(m => {
-                    map[m.jobId] = m;
+                    if (eligibleIds.has(m.jobId)) {
+                        map[m.jobId] = m;
+                    }
                 });
                 setTalentJobMatches(map);
                 setTalentMatchSummary(res.summary || null);
@@ -662,11 +666,15 @@ const OpportunitiesModule: React.FC<OpportunitiesModuleProps> = ({
 
         setIsMatchingTalentToCollabs(true);
         try {
-            const res = await runTalentToCollaborationsMatchmaking(myTalentProfile, collaborations);
+            const eligibleCollabs = collaborations.filter(c => c.authorUserId !== currentUser.id);
+            const eligibleIds = new Set(eligibleCollabs.map(c => c.id));
+            const res = await runTalentToCollaborationsMatchmaking(myTalentProfile, eligibleCollabs);
             if (res && res.matches) {
                 const map: Record<number, TalentCollabMatch> = {};
                 res.matches.forEach(m => {
-                    map[m.collabId] = m;
+                    if (eligibleIds.has(m.collabId)) {
+                        map[m.collabId] = m;
+                    }
                 });
                 setTalentCollabMatches(map);
                 setTalentCollabSummary(res.summary || null);
