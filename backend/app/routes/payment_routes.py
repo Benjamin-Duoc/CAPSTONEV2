@@ -63,8 +63,30 @@ def create_payment():
                 "url": url_pago, # Maintain compatibility with previous frontend if needed
                 "token": result['token']
             }), 200
-        else:
-            # ¡El Paracaídas de Errores!
+        elif result.get('code') == 1620:
+            # Fallback para Sandbox si el correo del usuario no tiene un dominio permitido por Flow:
+            logger.info(f"Reintentando pago Flow Sandbox con email de soporte para usuario {user_id}...")
+            fallback_result = flow.create_payment(
+                order_id=order_id,
+                subject=subject,
+                amount=amount,
+                email="test@flow.cl",
+                url_return=url_return,
+                url_confirmation=url_confirmation
+            )
+            if "url" in fallback_result and "token" in fallback_result:
+                url_pago = f"{fallback_result['url']}?token={fallback_result['token']}"
+                return jsonify({
+                    "status": "success", 
+                    "message": "Link de cobro generado (Sandbox)",
+                    "payment_url": url_pago,
+                    "url": url_pago,
+                    "token": fallback_result['token']
+                }), 200
+            else:
+                result = fallback_result
+
+        # ¡El Paracaídas de Errores!
             codigo_error = result.get('code')
             mensaje_original = result.get('message', 'Error desconocido en Flow')
             
