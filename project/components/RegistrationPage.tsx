@@ -79,17 +79,17 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onNavigate, onLogin
                 // Esperamos 2 segundos para que el usuario vea el mensaje de éxito
                 setTimeout(() => {
                     if (onLogin) {
-                        // Logueamos automáticamente al usuario (Usa el ID real del backend)
-                        onLogin({
-                            id: result.userId, 
+                        const loggedUser: User = result.user || {
+                            id: result.userId || 0,
                             firstName: formData.firstName,
                             lastName: formData.lastName,
                             email: formData.email,
                             region: formData.region,
-                            role: 'Colaborador Gratis', 
-                            password: formData.password, // Added password to match the type formally though it shouldn't be here in plain text.
+                            role: 'Colaborador Gratis',
+                            password: '',
                             createdAt: new Date().toISOString()
-                        });
+                        };
+                        onLogin(loggedUser);
                     }
                     onNavigate('home');
                 }, 2000);
@@ -127,6 +127,9 @@ const RegistrationPage: React.FC<RegistrationPageProps> = ({ onNavigate, onLogin
                     <h2 className="mt-2 text-3xl font-extrabold text-text-primary font-serif">Crea tu cuenta</h2>
                     <p className="mt-2 text-sm text-text-secondary">
                         Únete a la comunidad de periodistas innovadores
+                    </p>
+                    <p className="mt-2 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                        Tu cuenta inicia como <strong>Colaborador Gratis</strong>. Los perfiles <strong>Empresa</strong> y <strong>Cliente</strong> son habilitados por un Administrador.
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

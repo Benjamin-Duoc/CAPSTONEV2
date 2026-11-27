@@ -194,7 +194,7 @@ export const transformList = <T>(list: any[]): T[] => {
 
 // --- Users ---
 
-export const registerUser = async (data: Partial<User>): Promise<{ success: boolean; message: string; userId?: number }> => {
+export const registerUser = async (data: Partial<User>): Promise<{ success: boolean; message: string; userId?: number; user?: User }> => {
   try {
     const response = await fetch(`${API_BASE}/users/register`, {
       method: 'POST',
@@ -207,6 +207,17 @@ export const registerUser = async (data: Partial<User>): Promise<{ success: bool
   } catch (error) {
     console.error('API Error register:', error);
     return { success: false, message: 'Error de conexión con el servidor.' };
+  }
+};
+
+export const logoutUser = async (): Promise<void> => {
+  try {
+    await fetch(`${API_BASE}/users/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.error('API Error logout:', error);
   }
 };
 

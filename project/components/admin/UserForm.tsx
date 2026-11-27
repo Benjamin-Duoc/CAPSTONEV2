@@ -8,12 +8,17 @@ interface UserFormProps {
     onClose: () => void;
 }
 
+const normalizeEditableRole = (roleValue?: string) => {
+    if (!roleValue || roleValue === 'Colaborador') return 'Colaborador Gratis';
+    return roleValue;
+};
+
 const UserForm: React.FC<UserFormProps> = ({ user, onSave, onClose }) => {
     const [firstName, setFirstName] = useState(user?.firstName || '');
     const [lastName, setLastName] = useState(user?.lastName || '');
     const [email, setEmail] = useState(user?.email || '');
-    const [role, setRole] = useState(user?.role || 'Colaborador');
-    const [region, setRegion] = useState(user?.region || 'Metropolitana');
+    const [role, setRole] = useState(normalizeEditableRole(user?.role));
+    const [region, setRegion] = useState(user?.region || 'Metropolitana de Santiago');
     const [password, setPassword] = useState('');
     const [modalConfig, setModalConfig] = useState<{
         isOpen: boolean;
@@ -58,8 +63,8 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSave, onClose }) => {
         if (user) {
             onSave({ ...user, ...userData });
         } else {
-            if (!password) {
-                showAlert("Campo Obligatorio", "La contraseña es obligatoria para nuevos usuarios.", "warning");
+            if (!password || password.trim().length < 6) {
+                showAlert("Contraseña Inválida", "La contraseña debe tener al menos 6 caracteres para nuevos usuarios.", "warning");
                 return;
             }
             onSave(userData);
@@ -108,9 +113,10 @@ const UserForm: React.FC<UserFormProps> = ({ user, onSave, onClose }) => {
                             onChange={(e) => setRole(e.target.value)}
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                         >
-                            <option value="Colaborador">Colaborador</option>
-                            <option value="Cliente">Cliente</option>
+                            <option value="Colaborador Gratis">Colaborador Gratis</option>
+                            <option value="Colaborador Premium">Colaborador Premium</option>
                             <option value="Empresa">Empresa</option>
+                            <option value="Cliente">Cliente</option>
                             <option value="Administrador">Administrador</option>
                         </select>
                     </div>

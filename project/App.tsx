@@ -70,7 +70,7 @@ import {
   getPartnerLogos, createPartnerLogo, updatePartnerLogo, deletePartnerLogo,
   getTalentProfiles, createTalentProfile, updateTalentProfile, deleteTalentProfile,
   getRotationInterval, saveRotationInterval,
-  getAllUsers, registerUser, updateUser, deleteUser,
+  getAllUsers, registerUser, updateUser, deleteUser, logoutUser,
   getDestacados, createDestacado, updateDestacado, deleteDestacado,
   getApiUrl
 } from './utils/db';
@@ -173,6 +173,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    void logoutUser();
     setCurrentUser(null);
     setIsAdminMode(false);
     localStorage.removeItem('cipress_user');
@@ -236,7 +237,7 @@ const App: React.FC = () => {
           localStorage.setItem('cipress_last_active', now.toString());
 
           // Sync user role with backend
-          fetch(getApiUrl(`users/${user.id}`))
+          fetch(getApiUrl(`users/${user.id}`), { credentials: 'include' })
             .then(res => res.json())
             .then(data => {
               if (data && data.role) {
@@ -1139,6 +1140,11 @@ const App: React.FC = () => {
     try {
       const res = await updateUser(user);
       if (res.success) {
+        if (res.user && currentUser && res.user.id === currentUser.id) {
+          setCurrentUser(res.user);
+          setIsAdminMode(isAdminUser(res.user));
+          localStorage.setItem('cipress_user', JSON.stringify(res.user));
+        }
         showAppAlert("Usuario Actualizado", res.message, "success");
         setUsers(await getAllUsers()); // Refresh list
       } else {

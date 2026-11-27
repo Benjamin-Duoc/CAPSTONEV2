@@ -2,8 +2,33 @@ from app.extensions import db
 from app.models.all_models import User
 from werkzeug.security import generate_password_hash, check_password_hash
 
+VALID_ROLES = {
+    'Colaborador Gratis',
+    'Colaborador Premium',
+    'Empresa',
+    'Cliente',
+    'Administrador',
+}
+
+LEGACY_ROLE_ALIASES = {
+    'Colaborador': 'Colaborador Gratis',
+}
+
+
+def normalize_role_value(role_value, allow_privileged_role=False):
+    """Normaliza y valida el rol asignable según el privilegio de la operación."""
+    if not allow_privileged_role:
+        return 'Colaborador Gratis'
+
+    cleaned = (role_value or 'Colaborador Gratis').strip()
+    cleaned = LEGACY_ROLE_ALIASES.get(cleaned, cleaned)
+    if cleaned not in VALID_ROLES:
+        raise ValueError(f"Rol no válido: {cleaned}")
+    return cleaned
+
+
 class UserService:
-    def register_user(self, user_data):
+    def register_user(self, user_data, allow_privileged_role=False):
         email = user_data.get('email')
         password = user_data.get('password')
         first_name = user_data.get('firstName') or user_data.get('first_name')
@@ -25,14 +50,19 @@ class UserService:
 
         if User.query.filter_by(email=email).first():
             raise Exception("El correo ya está registrado")
-        
+
+        assigned_role = normalize_role_value(
+            user_data.get('role'),
+            allow_privileged_role=allow_privileged_role
+        )
+
         new_user = User(
             first_name=first_name,
             last_name=last_name,
             region=user_data.get('region'),
             email=user_data.get('email'),
             password_hash=generate_password_hash(user_data.get('password')),
-            role=user_data.get('role', 'Colaborador Gratis'),
+            role=assigned_role,
             avatar_url=user_data.get('avatarUrl') or user_data.get('avatar_url')
         )
         db.session.add(new_user)
@@ -55,7 +85,7 @@ class UserService:
         return User.query.get(user_id)
 
 
-    def update_user(self, user_id, user_data):
+    def update_user(self, user_id, user_data, allow_role_change=False):
         user = User.query.get(user_id)
         if not user:
             raise Exception("User not found")
@@ -78,8 +108,8 @@ class UserService:
             if existing and existing.id != user.id:
                 raise Exception("Email already in use")
             user.email = user_data['email']
-        if 'role' in user_data:
-            user.role = user_data['role']
+        if allow_role_change and 'role' in user_data:
+            user.role = normalize_role_value(user_data['role'], allow_privileged_role=True)
         if 'password' in user_data and user_data['password']:
             user.password_hash = generate_password_hash(user_data['password'])
             
