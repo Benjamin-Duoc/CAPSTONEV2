@@ -87,22 +87,22 @@ def create_payment():
                 result = fallback_result
 
         # ¡El Paracaídas de Errores!
-            codigo_error = result.get('code')
-            mensaje_original = result.get('message', 'Error desconocido en Flow')
-            
-            mensaje_amigable = "No pudimos conectar con la pasarela de pagos en este momento."
-            
-            # Si detectamos el error 1620 de Sandbox
-            if codigo_error == 1620:
-                mensaje_amigable = "El correo de tu cuenta no es válido para transacciones de prueba. Al estar en modo Sandbox, por favor intenta usar el correo asociado a tu cuenta de desarrollador."
-            
-            logger.error(f"Error de Flow [{codigo_error}]: {mensaje_original}")
-            return jsonify({
-                "status": "error", 
-                "message": mensaje_amigable,
-                "technical_details": mensaje_original,
-                "error": mensaje_amigable # Maintain compatibility
-            }), 400
+        codigo_error = result.get('code')
+        mensaje_original = result.get('message', 'Error desconocido en Flow')
+        
+        mensaje_amigable = "No pudimos conectar con la pasarela de pagos en este momento."
+        
+        # Si detectamos el error 1620 de Sandbox
+        if codigo_error == 1620:
+            mensaje_amigable = "El correo de tu cuenta no es válido para transacciones de prueba. Al estar en modo Sandbox, por favor intenta usar el correo asociado a tu cuenta de desarrollador."
+        
+        logger.error(f"Error de Flow [{codigo_error}]: {mensaje_original}")
+        return jsonify({
+            "status": "error", 
+            "message": mensaje_amigable,
+            "technical_details": mensaje_original,
+            "error": mensaje_amigable # Maintain compatibility
+        }), 400
 
     except Exception as e:
         logger.exception("Error critico en create_payment")
